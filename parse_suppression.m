@@ -19,9 +19,10 @@ sub_col = 1;
 contrast_col = 2;
 thresh_col = 3;
 sem_col = 4;
+relcontrast_col = 5; % ultimately our IV of interest
 
 % define output columns
-output_cols = {'subjName', 'Population', 'Task', 'Presentation', 'Orientation', 'Eye', 'MaskContrast', 'ThreshElev', 'ThreshElev_SE'};
+output_cols = {'subjName', 'Population', 'Task', 'Presentation', 'Orientation', 'Eye', 'MaskContrast', 'ThreshElev', 'ThreshElev_SE', 'RelMaskContrast'};
 col_str = strjoin(output_cols,'\t') ;
 col_str = sprintf('%s\n',col_str) ;
 output_txt = '' ;
@@ -58,7 +59,8 @@ for i_pc = presentation_conditions
                 MaskContrast = df(i_r, contrast_col);
                 ThreshElev = df(i_r, thresh_col);
                 ThreshElev_SE = df(i_r, sem_col);
-                obs_txt = sprintf('%s\t%s\t%s\t%s\t%s\t%s\t%.03f\t%.03f\t%.03f\n',subjName,Population,task_id,Presentation,Orientation,Eye,MaskContrast,ThreshElev,ThreshElev_SE);
+                RelMaskContrast = df(i_r, relcontrast_col);
+                obs_txt = sprintf('%s\t%s\t%s\t%s\t%s\t%s\t%.03f\t%.03f\t%.03f\t%.03f\n',subjName,Population,task_id,Presentation,Orientation,Eye,MaskContrast,ThreshElev,ThreshElev_SE,RelMaskContrast);
                 output_txt = [output_txt obs_txt] ;
             end
         end
