@@ -22,13 +22,15 @@ def scaterror_plot(x, y, **kwargs):
     ses = data[kwargs.pop("yerr")].values
     plt.errorbar(data=data, x=x, y=y, yerr=ses,**kwargs)
 
-def group_facet_plots(df, plot_func, ofn, grouping_vars, row, col, x, y, col_wrap=None, hue=None, **kwargs):
+def group_facet_plots(df, plot_func, ofn, grouping_vars, row, col, x, y, col_wrap=None, hue=None, legend=True, **kwargs):
 	with PdfPages(ofn) as pdf:
 		grouped = df.groupby(grouping_vars)
 		for gv, gr in grouped:
 			#print 'Plotting %s'%'.'.join(gv)
 			g = sns.FacetGrid(gr, row=row, col=col, hue=hue, col_wrap=col_wrap)
-			g.map_dataframe(plot_func,x,y,**kwargs).add_legend()
+			g = g.map_dataframe(plot_func,x,y,**kwargs)
+			if legend:
+				g = g.add_legend()
 			g.fig.suptitle('/'.join(gv), fontsize=12, y=1.00)
 			pdf.savefig(g.fig)
 	print 'Plots saved at %s'%ofn
