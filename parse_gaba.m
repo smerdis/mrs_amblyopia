@@ -22,7 +22,7 @@ relcontrast_col = 5; % ultimately our IV of interest
 % define output columns
 output_cols = {'subjName', 'Population', 'Presentation', 'GABA'};
 col_str = strjoin(output_cols,'\t') ;
-col_str = sprintf('%s\n',col_str)
+col_str = sprintf('%s\n',col_str);
 output_txt = '' ;
 
 % make sure the data is what we think it is!
@@ -33,7 +33,7 @@ assert(length(d.ambGroup)==length(d.allSub_clean), 'ambGroup and allSub have dif
 df = d.allSub ;
 [nr, ~] = size(df); % number of rows of data
 for i_r = 1:nr
-    subjName = d.subID{i_r}; % initials [unique identifier]
+    subjName = lower(d.subID{i_r}); % initials [unique identifier]
     Population = population_conditions{d.ambGroup(i_r)+1};
     for i_p = 1:length(presentation_conditions)
         Presentation = presentation_conditions{i_p};
