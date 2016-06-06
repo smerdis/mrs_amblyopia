@@ -15,6 +15,9 @@ def load_psychophys(pp_fn):
 	df['logRelContrast'] = np.log(df.RelMaskContrast)
 	return df
 
+def load_gaba(gaba_fn):
+	return pd.read_table(gaba_fn)
+
 def scaterror_plot(x, y, **kwargs):
 	#'''This function is designed to be called with FacetGrid.map_dataframe() to make faceted plots of various conditions.'''
     #print x, y, kwargs
@@ -35,3 +38,13 @@ def group_facet_plots(df, plot_func, ofn, grouping_vars, row, col, x, y, col_wra
 			pdf.savefig(g.fig)
 	print 'Plots saved at %s'%ofn
 	plt.close('all')
+
+def model_subj(g):
+    '''This function defines how to model a individual group of observations and what to return.
+    
+    In this case a group is a single subject, eye, task condition.
+    We model the threshold elevation as a linear function of (log) relative mask contrast,
+    and return the slope of the line and the r-value...'''
+    import scipy.stats as st
+    slope, intercept, r_value, p_value, std_err = st.linregress(g.logRelContrast, g.ThreshElev) # x, y
+    return pd.Series([slope, r_value], index=['slope_lm','R_lm'])
