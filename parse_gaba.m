@@ -1,12 +1,9 @@
 %%
-% It would be best to write a function to parse a suppression task data
-% matrix into a long-format columnar text file, then use it on OS and SS.
+% A function to parse a gaba task data
+% matrix into a long-format columnar text file.
 
 function [col_str, output_txt] = parse_gaba(d)
 % d: data structure (i.e. DAV.GABA.raw.ratio_CrOff)
-% task_id: code to use for this task (string) - provided by calling
-% script, which is aware of multiple tasks. this function only cares about
-% one.
 
 population_conditions = {'Control', 'Amblyope'};
 presentation_conditions = {'occ_binoc', 'occ_none'}; % which conditions (columns of allSub) will be used
