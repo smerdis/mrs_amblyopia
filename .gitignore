@@ -4,3 +4,4 @@
 plots/*
 \[*\].ipynb
 *.mat
+*.ipynb_*
