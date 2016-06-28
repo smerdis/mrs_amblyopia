@@ -5,3 +5,4 @@ plots/*
 \[*\].ipynb
 *.mat
 *.ipynb_*
+*.DS_Store*
