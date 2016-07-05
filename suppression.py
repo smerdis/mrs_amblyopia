@@ -4,9 +4,13 @@
 
 import numpy as np
 import pandas as pd
+
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 import seaborn as sns
+
+from scipy.optimize import fmin
+
 import itertools as it
 
 def load_psychophys(pp_fn):
@@ -102,12 +106,42 @@ def two_stage_model_error(weights, C_thiseye, C_othereye, X_thiseye, X_othereye)
 	#print responses
 	return abs(k-responses).sum()
 
+def model_group_means(g):
+	'''Model the group means. In this case, this function is to be applied to each group, where a group is a different
+	condition of the experiment. In this case, it corresponds to a particular:
+	- Task (OS/SS)
+	- Presentation (nMono/nDicho)
+	- Eye (which viewed the target, De/Nde)
+	- Population (Con/Amb)
+
+	The values that are then modeled are RelMaskContrast (x) vs ThreshElev (y)'''
+
+	print g.name
+
+	masks = g.RelMaskContrast
+	threshs = g.ThreshElev
+
+	assert(np.all(g.Eye==g.Eye.iloc[0])) # Make sure we only are looking at data for one eye
+	Eye = g.Eye.iloc[0]
+
+	assert(np.all(g.Presentation==g.Presentation.iloc[0])) # again, one condition only
+	Presentation = g.Presentation.iloc[0]
+
+	if Presentation=='nDicho':
+		w_m, w_d = fmin(two_stage_model_error, (1,1), args=(threshs, np.zeros_like(threshs), np.zeros_like(masks), masks))
+	elif Presentation=='nMono':
+		w_m, w_d = fmin(two_stage_model_error, (1,1), args=(threshs, np.zeros_like(threshs), masks, np.zeros_like(masks)))
+
+	return pd.Series([w_m, w_d], index=['w_m','w_d'])
+
 def model_subj(g):
     '''This function defines how to model a individual group of observations and what to return.
     
     In this case a group is a single subject, eye, task condition.
     We model the threshold elevation as a linear function of (log) relative mask contrast,
     and return the slope of the line and the r-value...'''
+
+    # currently this linear regression is a placeholder, need to implement 2-stage model using functions created above.
     import scipy.stats as st
     slope, intercept, r_value, p_value, std_err = st.linregress(g.logRelContrast, g.ThreshElev) # x, y
     return pd.Series([slope, r_value], index=['slope_lm','R_lm'])
