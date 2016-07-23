@@ -43,7 +43,7 @@ def group_facet_plots(df, plot_func, ofn, grouping_vars, row, col, x, y, col_wra
 			#print 'Plotting %s'%'.'.join(gv)
 			g = sns.FacetGrid(gr, row=row, col=col, hue=hue, col_wrap=col_wrap, size=3, aspect=1.5, sharex=False, sharey=False, margin_titles=True)
 			#xlim=(3,110), ylim=(.5,30)
-			#g.set(xscale='log', yscale='log')
+			g.set(xscale='log', yscale='log')
 			#g.set(yscale='log')
 			g = g.map_dataframe(plot_func,x,y,**kwargs)
 			if legend:
@@ -250,7 +250,8 @@ def task_2st_fac_err(params, C_thiseye, C_othereye, X_thiseye, X_othereye, targe
 
 def task_2st_fac_thresh(C_thiseye, C_othereye, X_thiseye, X_othereye, target_eye, presentation, a, wm_de_dicho, wd_de_dicho, wm_de_mono, wd_de_mono, wm_nde_dicho, wd_nde_dicho, wm_nde_mono, wd_nde_mono): #threshs will be minimized
 	k = 0.2
-	responses, binsums = task_2st_fac_resp((a, wm_de_dicho, wd_de_dicho, wm_de_mono, wd_de_mono, wm_nde_dicho, wd_nde_dicho, wm_nde_mono, wd_nde_mono),
+	responses, binsums = task_2st_fac_resp(
+		(a, wm_de_dicho, wd_de_dicho, wm_de_mono, wd_de_mono, wm_nde_dicho, wd_nde_dicho, wm_nde_mono, wd_nde_mono),
 		C_thiseye, C_othereye, X_thiseye, X_othereye, target_eye, presentation)
 	#print(responses)
 	return ((k-responses)**2).sum()
@@ -354,6 +355,9 @@ def model_group_means(g, err_func, thresh_func, ret='preds'):
 		presentation_cond[idxs] = contrasts[5]
 		ind_start = ind_start+n_obs
 
+		# inputs, but including the (0,0) point
+		# result - this doesn't work either, since (0,0) is treated like any other data point, and so error is tolerated
+		# would need to re-express this as a constraint
 		idxs0 = list(range(ind_start0, ind_start0+n_obs+1))
 		C_this0[idxs0] = contrasts0[0]
 		C_other0[idxs0] = contrasts0[1]
@@ -370,7 +374,8 @@ def model_group_means(g, err_func, thresh_func, ret='preds'):
 	print(inputs)
 	print(inputs_with0)
 	#print(pd.DataFrame([C_this, C_other, X_this, X_other, target_eye, presentation_cond]))
-	opt_res = so.minimize(err_func, np.zeros(n_free), args=inputs_with0, bounds=[(0, None) for p in free_params])
+	opt_res = so.minimize(err_func, np.zeros(n_free), args=inputs, bounds=[(0, None) for p in free_params])
+	#opt_res = so.minimize(err_func, np.zeros(n_free), args=inputs_with0, bounds=[(0, None) for p in free_params])
 	print(opt_res['success'], opt_res['message'])
 	if not opt_res['success']:
 		error('optimization failed')
@@ -378,7 +383,8 @@ def model_group_means(g, err_func, thresh_func, ret='preds'):
 	print(*zip(free_params,params))
 
 	if ret=='preds':
-		threshpred = [predict_thresh(thresh_func, [1],[b],[c],[d],[e],[f],*params)[0] for a,b,c,d,e,f in zip(*inputs)]
+		threshpred = [predict_thresh(thresh_func, [a],[b],[c],[d],[e],[f],*params)[0] for a,b,c,d,e,f in zip(*inputs)]
+		#threshpred = [predict_thresh(thresh_func, [1],[b],[c],[d],[e],[f],*params)[0] for a,b,c,d,e,f in zip(*inputs)]
 		g['ThreshPred'] = threshpred
 		return g
 	elif ret=='weights':
