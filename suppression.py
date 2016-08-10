@@ -145,7 +145,7 @@ def two_stage_fac_resp(weights, C_thiseye, C_othereye, X_thiseye, X_othereye):
 		binsum_mask = stage1De_m + stage1Nde_m
 
 		# model with facilitation, taken from Meese & Baker 2009
-		resp_t = (1 + a*binsum_mask)*(binsum_target**p)/(Z+binsum_target**q)
+		resp_t = ((1 + a*binsum_mask)*(binsum_target**p))/(Z+binsum_target**q)
 		responses[i] = resp_t
 		binsums[i] = binsum_target
 
@@ -158,13 +158,13 @@ def two_stage_fac_error(weights, C_thiseye, C_othereye, X_thiseye, X_othereye):
 	# k is taken from Meese & Baker
 	k = 0.2 # proportional to stdev of late additive noise / SNR
 	responses, binsums = two_stage_fac_resp(weights, C_thiseye, C_othereye, X_thiseye, X_othereye)
-	return abs(k-responses).sum()
+	return np.sum((k-responses)**2)
 
 #error function to be minimized to obtain threshElev predictions.
 def two_stage_fac_thresh(C_thiseye, C_othereye, X_thiseye, X_othereye, w_m, w_d, a): #threshs will be minimized
 	k = 0.2
 	responses, binsums = two_stage_fac_resp((w_m, w_d, a), C_thiseye, C_othereye, X_thiseye, X_othereye)
-	return abs(k-responses).sum()
+	return (k-responses)**2
 
 def predict_thresh(func, init_guess, C_other, X_this, X_other, *params):
 	'''A wrapper function that accepts a threshold-error minimizing function with arguments in a convenient order'''
@@ -255,6 +255,49 @@ def task_2st_fac_thresh(C_thiseye, C_othereye, X_thiseye, X_othereye, target_eye
 		C_thiseye, C_othereye, X_thiseye, X_othereye, target_eye, presentation)
 	#print(responses)
 	return ((k-responses)**2).sum()
+
+def model_condition(g, err_func, thresh_func, ret='preds'):
+	'''Model a condition. In this case, this function is to be applied to each group, where a group is a particular:
+	- Task (OS/SS)
+	- Mask Orientation (Iso/Cross)
+	- Presentation (nMono/nDicho)
+	- Eye (which viewed the target, De/Nde)
+	- Population (Con/Amb)
+
+	The values that are then modeled are RelMaskContrast (x) vs ThreshElev (y)
+
+	if ret='weights', returns the weights (and any other fitted parameters) for this group.
+	the default is to return the predicted thresholds (ret='preds')'''
+
+	import inspect
+
+	free_params = inspect.getargspec(thresh_func).args[4:] # 0-3 are C_thiseye, C_othereye, X_thiseye, X_othereye
+	n_free = len(free_params)
+
+	print(g.name)
+
+	masks = g.RelMaskContrast
+	threshs = g.ThreshElev
+
+	assert(np.all(g.Eye==g.Eye.iloc[0])) # Make sure we only are looking at data for one eye
+	Eye = g.Eye.iloc[0]
+	assert(np.all(g.Presentation==g.Presentation.iloc[0])) # again, one condition only
+	Presentation = g.Presentation.iloc[0]
+
+	if Presentation=='nDicho':
+		contrasts = (threshs.as_matrix(), np.zeros_like(threshs), np.zeros_like(masks), masks.as_matrix())
+	elif Presentation=='nMono':
+		contrasts = (threshs.as_matrix(), np.zeros_like(threshs), masks.as_matrix(), np.zeros_like(masks))
+
+	params = fmin(err_func, np.zeros(n_free), args=contrasts) #fitted weights of free parameters of the model, as implemented by err_func
+	print(*zip(free_params,params))
+	threshpred = [predict_thresh(thresh_func, [1],[b],[c],[d],*params)[0] for a,b,c,d in zip(*contrasts)]
+
+	if ret=='preds':
+		g['ThreshPred'] = threshpred
+		return g
+	elif ret=='weights':
+		return pd.Series([params], index=free_params)
 
 def model_group_means(g, err_func, thresh_func, ret='preds'):
 	'''Model the group means. In this case, this function is to be applied to each group, where a group is a different
