@@ -10,6 +10,7 @@ from matplotlib.backends.backend_pdf import PdfPages
 import seaborn as sns
 
 import scipy.optimize as so
+from lmfit import minimize, Parameters
 
 import itertools as it
 
@@ -115,7 +116,7 @@ def two_stage_nofac_thresh(C_thiseye, C_othereye, X_thiseye, X_othereye, w_m, w_
 	responses, binsums = two_stage_nofac_resp((w_m, w_d), C_thiseye, C_othereye, X_thiseye, X_othereye)
 	return abs(k-responses).sum()
 
-def two_stage_fac_resp(weights, C_thiseye, C_othereye, X_thiseye, X_othereye):
+def two_stage_fac_resp(params, C_thiseye, C_othereye, X_thiseye, X_othereye):
 	'''Two-stage model with facilitation - model outputs.
 	weights: (w_xm, w_xd, a) mono- and dichoptic-suppression constants, a = facilitation parameter [same for all observations]
 	C_thiseye, C_othereye: target contrasts in the two eyes, in percent
@@ -125,15 +126,16 @@ def two_stage_fac_resp(weights, C_thiseye, C_othereye, X_thiseye, X_othereye):
 
 	assert(len(C_thiseye)==len(C_othereye) & len(C_thiseye)==len(X_thiseye) & len(C_thiseye)==len(X_othereye))
 
-	w_xm = weights[0]
-	w_xd = weights[1]
-	a = weights[2]
+	w_xm = params['w_m']#.value
+	w_xd = params['w_d']#.value
+	a = params['a']#.value
+	k = params['k']#.value
 	p = 8 # stage 2 excitatory exponent # or 2.4
 	q = 6.5 # stage 2 suppressive exponent # or 2
 	Z = .0085 # stage 2 saturation constant # or 5, or 1
 
 	responses = np.empty(len(C_thiseye))
-	binsums = np.empty(len(C_thiseye))
+	#binsums = np.empty(len(C_thiseye))
 
 	for i,(CDe, CNde, XDe, XNde) in enumerate(zip(C_thiseye, C_othereye, X_thiseye, X_othereye)):
 		stage1De_t = stage1(CDe, CNde, XDe, XNde, w_xm, w_xd)
@@ -147,30 +149,33 @@ def two_stage_fac_resp(weights, C_thiseye, C_othereye, X_thiseye, X_othereye):
 		# model with facilitation, taken from Meese & Baker 2009
 		resp_t = ((1 + a*binsum_mask)*(binsum_target**p))/(Z+binsum_target**q)
 		responses[i] = resp_t
-		binsums[i] = binsum_target
+		#binsums[i] = binsum_target
 
-	return responses, binsums
+	return k-responses
 
-def two_stage_fac_error(weights, C_thiseye, C_othereye, X_thiseye, X_othereye):
-	'''error function to be minimized over a group of observations to determine values of free parameters.
+# def two_stage_fac_error(weights, C_thiseye, C_othereye, X_thiseye, X_othereye):
+# 	'''error function to be minimized over a group of observations to determine values of free parameters.
 
-	model with facilitation, so w_m, w_d, a.'''
-	# k is taken from Meese & Baker
-	k = 0.2 # proportional to stdev of late additive noise / SNR
-	responses, binsums = two_stage_fac_resp(weights, C_thiseye, C_othereye, X_thiseye, X_othereye)
-	return np.sum((k-responses)**2)
+# 	model with facilitation, so w_m, w_d, a.'''
+# 	# k is taken from Meese & Baker
+# 	#k = 0.2 # proportional to stdev of late additive noise / SNR
+# 	#responses, binsums = two_stage_fac_resp(weights, C_thiseye, C_othereye, X_thiseye, X_othereye)
+# 	#return np.sum((k-responses)**2)
 
 #error function to be minimized to obtain threshElev predictions.
-def two_stage_fac_thresh(C_thiseye, C_othereye, X_thiseye, X_othereye, w_m, w_d, a): #threshs will be minimized
-	k = 0.2
-	responses, binsums = two_stage_fac_resp((w_m, w_d, a), C_thiseye, C_othereye, X_thiseye, X_othereye)
-	return (k-responses)**2
+def two_stage_fac_thresh(thresh_param, C_othereye, X_thiseye, X_othereye, fitted_params): #threshs will be minimized
+	C_thiseye = thresh_param['C_thiseye'].value
+	return two_stage_fac_resp(fitted_params, [C_thiseye], C_othereye, X_thiseye, X_othereye)
 
-def predict_thresh(func, init_guess, C_other, X_this, X_other, *params):
+def predict_thresh(func, init_guess, C_other, X_this, X_other, fitted_params):
 	'''A wrapper function that accepts a threshold-error minimizing function with arguments in a convenient order'''
-	res = so.minimize(func, x0=init_guess, args=(C_other, X_this, X_other, *params))
+	thresh_params = Parameters()
+	thresh_params.add(name='C_thiseye', value=init_guess, vary=True)
+	thresh_fit = minimize(func, thresh_params, args=(C_other, X_this, X_other, fitted_params))
+	return thresh_fit.params['C_thiseye'].value
+	#res = so.minimize(func, x0=init_guess, args=(C_other, X_this, X_other, *params))
 	#print(res.x)
-	return res.x
+	#return res.x
 
 def task_2st_fac_resp(weights, C_thiseye, C_othereye, X_thiseye, X_othereye, target_eye, presentation):
 	'''Two-stage model with facilitation - model outputs.
@@ -256,7 +261,7 @@ def task_2st_fac_thresh(C_thiseye, C_othereye, X_thiseye, X_othereye, target_eye
 	#print(responses)
 	return ((k-responses)**2).sum()
 
-def model_condition(g, err_func, thresh_func, ret='preds'):
+def model_condition(g, err_func, thresh_func, params, ret='preds'):
 	'''Model a condition. In this case, this function is to be applied to each group, where a group is a particular:
 	- Task (OS/SS)
 	- Mask Orientation (Iso/Cross)
@@ -268,11 +273,6 @@ def model_condition(g, err_func, thresh_func, ret='preds'):
 
 	if ret='weights', returns the weights (and any other fitted parameters) for this group.
 	the default is to return the predicted thresholds (ret='preds')'''
-
-	import inspect
-
-	free_params = inspect.getargspec(thresh_func).args[4:] # 0-3 are C_thiseye, C_othereye, X_thiseye, X_othereye
-	n_free = len(free_params)
 
 	print(g.name)
 
@@ -289,15 +289,18 @@ def model_condition(g, err_func, thresh_func, ret='preds'):
 	elif Presentation=='nMono':
 		contrasts = (threshs.as_matrix(), np.zeros_like(threshs), masks.as_matrix(), np.zeros_like(masks))
 
-	params = fmin(err_func, np.zeros(n_free), args=contrasts) #fitted weights of free parameters of the model, as implemented by err_func
-	print(*zip(free_params,params))
-	threshpred = [predict_thresh(thresh_func, [1],[b],[c],[d],*params)[0] for a,b,c,d in zip(*contrasts)]
+	params_fit = minimize(err_func, params, args=contrasts)
+	pfit = params_fit.params
+	pfit.pretty_print()
+	#params = fmin(err_func, np.zeros(n_free), args=contrasts) #fitted weights of free parameters of the model, as implemented by err_func
+	#print(*zip(free_params,params))
+	threshpred = [predict_thresh(thresh_func, a,[b],[c],[d],pfit) for a,b,c,d in zip(*contrasts)]
 
 	if ret=='preds':
 		g['ThreshPred'] = threshpred
 		return g
 	elif ret=='weights':
-		return pd.Series([params], index=free_params)
+		return pd.Series(pfit, index=free_params)
 
 def model_group_means(g, err_func, thresh_func, ret='preds'):
 	'''Model the group means. In this case, this function is to be applied to each group, where a group is a different
