@@ -10,8 +10,7 @@ from matplotlib.backends.backend_pdf import PdfPages
 import seaborn as sns
 
 import scipy.optimize as so
-from lmfit import minimize, Parameters
-
+import lmfit as lf
 import itertools as it
 
 def load_psychophys(pp_fn):
@@ -109,9 +108,9 @@ def two_stage_fac_thresh(thresh_param, C_othereye, X_thiseye, X_othereye, fitted
 
 def predict_thresh(func, init_guess, C_other, X_this, X_other, fitted_params):
 	'''A wrapper function that accepts a threshold-error minimizing function with arguments in a convenient order'''
-	thresh_params = Parameters()
+	thresh_params = lf.Parameters()
 	thresh_params.add(name='C_thiseye', value=init_guess, vary=True)
-	thresh_fit = minimize(func, thresh_params, args=(C_other, X_this, X_other, fitted_params))
+	thresh_fit = lf.minimize(func, thresh_params, args=(C_other, X_this, X_other, fitted_params))
 	return thresh_fit.params['C_thiseye'].value
 
 def model_condition(g, err_func, thresh_func, params, ret='preds'):
