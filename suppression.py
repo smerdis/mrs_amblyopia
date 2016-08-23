@@ -7,6 +7,7 @@ import pandas as pd
 
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
+import matplotlib.ticker as tick
 import seaborn as sns
 
 import scipy.optimize as so
@@ -28,13 +29,26 @@ def scaterror_plot(x, y, **kwargs):
     plt.errorbar(data=data, x=x, y=y, yerr=ses,**kwargs)
 
 def fit_plot(x, y, **kwargs):
+	# set up the data frame for plotting, get kwargs etc
 	data = kwargs.pop("data")
 	fmt_obs = kwargs.pop("fmt_obs")
 	fmt_pred = kwargs.pop("fmt_pred")
 	ses = data[kwargs.pop("yerr")].values # SE's of actually observed threshold elevations
 	predY = data[kwargs.pop("Ycol")].values
-	plt.errorbar(data=data, x=x, y=y, yerr=ses,fmt=fmt_obs,**kwargs)
-	plt.errorbar(data=data, x=x, y=predY,fmt=fmt_pred,**kwargs)
+
+	# control the plotting
+	ax = plt.gca()
+	ax.set_xscale('log')
+	ax.set_yscale('log')
+	ax.get_xaxis().set_major_locator(tick.LogLocator(subs=[1, 2, 4, 6, 8]))
+	ax.get_yaxis().set_major_locator(tick.LogLocator(subs=[1, 2, 4, 6, 8]))
+	ax.get_xaxis().set_major_formatter(tick.ScalarFormatter())
+	ax.get_yaxis().set_major_formatter(tick.ScalarFormatter())
+	ax.set_ylim([0.7, np.max([np.max(data[y]), np.max(predY)])+1])
+	ax.set_xlim([4, 100])
+	plt.errorbar(data=data, x=x, y=y, yerr=ses,fmt=fmt_obs, **kwargs)
+	plt.errorbar(data=data, x=x, y=predY,fmt=fmt_pred, **kwargs)
+	plt.axhline(y=1)
 
 def group_facet_plots(df, plot_func, ofn, grouping_vars, row, col, x, y, col_wrap=None, hue=None, legend=True, **kwargs):
 	with PdfPages(ofn) as pdf:
@@ -42,9 +56,6 @@ def group_facet_plots(df, plot_func, ofn, grouping_vars, row, col, x, y, col_wra
 		for gv, gr in grouped:
 			#print 'Plotting %s'%'.'.join(gv)
 			g = sns.FacetGrid(gr, row=row, col=col, hue=hue, col_wrap=col_wrap, size=3, aspect=1.5, sharex=False, sharey=False, margin_titles=True)
-			#xlim=(3,110), ylim=(.5,30)
-			g.set(xscale='log', yscale='log')
-			#g.set(yscale='log')
 			g = g.map_dataframe(plot_func,x,y,**kwargs)
 			if legend:
 				g = g.add_legend()
@@ -141,7 +152,7 @@ def model_condition(g, err_func, thresh_func, params, ret='preds'):
 	elif Presentation=='nMono':
 		contrasts = (threshs.as_matrix(), np.zeros_like(threshs), masks.as_matrix(), np.zeros_like(masks))
 
-	params_fit = minimize(err_func, params, args=contrasts)
+	params_fit = lf.minimize(err_func, params, args=contrasts)
 	pfit = params_fit.params
 	pfit.pretty_print()
 	#params = fmin(err_func, np.zeros(n_free), args=contrasts) #fitted weights of free parameters of the model, as implemented by err_func
