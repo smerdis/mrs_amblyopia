@@ -14,19 +14,19 @@ ss_fn = [data_dir '/SS_fit_summary_n35_061416_4.5Bin_iqr.mat'] ;
 % os_fn = [data_dir '/OS_stair_summary_n36_052316_3.5Bin_none.mat'] ;
 os_fn = [data_dir '/OS_fit_summary_n36_061416_4.5Bin_iqr.mat'];
 
-output_fn = 'supp_data_means.txt';
+output_fn = 'supp_data_individual_111016.txt';
 
 %% Surround suppression task
 load(ss_fn) ; % should yield 'SS'
 
 % Call the parsing function
-[ss_col_str, ss_txt] = parse_suppression(SS.all, 'SS') ;
+[ss_col_str, ss_txt] = parse_suppression(SS.all, 'SS', 0) ;
 
 %% Overlay suppression task
 load(os_fn) ; % should yield 'OS'
 
 % Call the parsing function
-[os_col_str, os_txt] = parse_suppression(OS.all, 'OS') ;
+[os_col_str, os_txt] = parse_suppression(OS.all, 'OS', 0) ;
 
 %% Evaluate, merge
 
