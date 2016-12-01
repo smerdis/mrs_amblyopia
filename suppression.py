@@ -55,25 +55,37 @@ def fit_plot(x, y, **kwargs):
 	ax.get_yaxis().set_major_locator(tick.LogLocator(subs=[1, 3]))
 	ax.get_xaxis().set_major_formatter(tick.ScalarFormatter())
 	ax.get_yaxis().set_major_formatter(tick.ScalarFormatter())
-	ax.set_ylim([0.7, np.max([np.max(data[y]), np.max(predY)])+1])
-	ax.set_xlim([4, 100])
+	#ax.set_ylim([0.5, np.max([np.max(data[y])+1])])
+	#ax.set_xlim([1, 100])
 	plt.errorbar(data=data, x=x, y=y, yerr=ses,fmt=fmt_obs, **kwargs)
 	plt.errorbar(data=data, x=x, y=predY,fmt=fmt_pred, **kwargs)
-	plt.axhline(y=1)
+	plt.axhline(y=1,ls='dotted')
+
+def gaba_plot(x, y, **kwargs):
+	# set up the data frame for plotting, get kwargs etc
+	data = kwargs.pop("data")
+	fmt_obs = kwargs.pop("fmt_obs")
+	print(x, y)
+
+	# control the plotting
+	ax = plt.gca()
+	#sns.regplot(data=data, x=x, y=y, fit_reg=True, ci=None, dropna=True)
+	sns.kdeplot(data[x], data[y])
 
 def group_facet_plots(df, plot_func, ofn, grouping_vars, row, col, x, y, col_wrap=None, hue=None, legend=True, **kwargs):
 	with PdfPages(ofn) as pdf:
 		grouped = df.groupby(grouping_vars)
 		for gv, gr in grouped:
-			#print 'Plotting %s'%'.'.join(gv)
+			print('Plotting %s'%'.'.join(gv))
 			g = sns.FacetGrid(gr, row=row, col=col, hue=hue, col_wrap=col_wrap, size=3, aspect=1.5, sharex=False, sharey=False, margin_titles=True)
 			g = g.map_dataframe(plot_func,x,y,**kwargs)
 			if legend:
 				g = g.add_legend()
 			g.fig.suptitle(gv, fontsize=16, y=0.97)
 			g.fig.subplots_adjust(top=.9, right=.8)
-			g.set_axis_labels("Relative Mask Contrast (%)", "Threshold Elevation")
+			g.set_axis_labels(x, y)
 			pdf.savefig(g.fig)
+			plt.clf()
 	print('Plots saved at',ofn)
 	plt.close('all')
 
@@ -196,6 +208,12 @@ def model_condition(g, err_func, thresh_func, params, ret='preds', supp_only=Fal
 			last_fac_idx = fac_idxs[-1]
 		threshs = threshs[last_fac_idx+1:]
 		masks = masks[last_fac_idx+1:]
+		if len(masks) <= 1: # there is only one data point after the facilitation regime, so we can't estimate a slope
+			if ret=='preds':
+				g['ThreshPred'] = thresh_preds # should be nan's
+				return g
+			else:
+				return None
 		#print(threshs, '\n', last_fac_idx, '\n', threshs_nofac, masks_nofac)
 
 	assert(np.all(g.Eye==g.Eye.iloc[0])) # Make sure we only are looking at data for one eye
@@ -223,4 +241,4 @@ def model_condition(g, err_func, thresh_func, params, ret='preds', supp_only=Fal
 		g['ThreshPred'] = thresh_preds
 		return g
 	elif ret=='weights':
-		return pd.Series(pfit, index=free_params)
+		return pd.Series(pfit.valuesdict(), index=params.keys())
