@@ -18,7 +18,7 @@ eye_conds = {'Nde', 'De'};
 if grouped
     output_cols = {'Task', 'Presentation', 'Orientation', 'Eye', 'Population', 'Trace', 'Bin', 'ThreshElev', 'ThreshElev_SE', 'RelMaskContrast'};
 else % if we want data for each subject, add a column to identify them (initials)
-    output_cols = {'Subject', 'Task', 'Presentation', 'Orientation', 'Eye', 'Population', 'MaskContrast', 'ThreshElev', 'ThreshElev_SE', 'RelMaskContrast'};
+    output_cols = {'Subject', 'Task', 'Presentation', 'Orientation', 'Eye', 'Population', 'MaskContrast', 'ThreshElev', 'ThreshElev_SE', 'RelMaskContrast', 'Trace', 'BaselineThresh'};
     
     % also let's define what we expect the individual subject data to look like
     expected_lbls = {'subj'  'maskCtr'  'thresh'  'stderr'  'relMaskCtr'};
@@ -36,6 +36,7 @@ for i_pc = presentation_conditions
     % select the data corresponding to the presentation condition
     if strcmp(i_pc, 'nMono') dat_p = d.nMono;
     elseif strcmp(i_pc, 'nDicho') dat_p = d.nDicho; end
+    dat_base = d.base1 ;
     
     for i_oc = orient_conds
         % select the data corresponding to the orientation condition
@@ -44,8 +45,13 @@ for i_pc = presentation_conditions
         
         for i_ec = eye_conds
             % select the data corresponding to the eye that viewed
-            if strcmp(i_ec, 'Nde') dat_poe = dat_po.Nde;
-            elseif strcmp(i_ec, 'De') dat_poe = dat_po.De; end
+            if strcmp(i_ec, 'Nde')
+                dat_poe = dat_po.Nde;
+                dat_base_eye = dat_base.Nde ;
+            elseif strcmp(i_ec, 'De')
+                dat_poe = dat_po.De;
+                dat_base_eye = dat_base.De ;
+            end
             
             % update 11/10/16: want this function to handle individual data
             % (grouped = 0) as well as get means like it has been doing.
@@ -85,6 +91,8 @@ for i_pc = presentation_conditions
                 for i_r = 1:nr
                     subjID = df(i_r, sub_col) ;
                     subjName = dat_poe.subNms{subjID} ;% initials [unique identifier], order in subNms corresponds to first col (subjID) of df
+                    subj_idx_in_baseline_struct = find(strcmp(dat_base_eye.subNms, subjName)) ;
+                    subj_baseline_thresh = dat_base_eye.allSub(subj_idx_in_baseline_struct, 3) ;
                     Population = population_conditions{dat_poe.ambOrder(subjID)+1} ;
                     Presentation = i_pc{1} ;
                     Orientation = i_oc{1} ;
@@ -93,7 +101,8 @@ for i_pc = presentation_conditions
                     ThreshElev = df(i_r, thresh_col);
                     ThreshElev_SE = df(i_r, sem_col);
                     RelMaskContrast = df(i_r, rel_contrast_col);
-                    obs_txt = sprintf('%s\t%s\t%s\t%s\t%s\t%s\t%.03f\t%.03f\t%.03f\t%.03f\n',subjName,task_id,Presentation,Orientation,Eye,Population,MaskContrast,ThreshElev,ThreshElev_SE,RelMaskContrast);
+                    trace = [Population '-' Eye];
+                    obs_txt = sprintf('%s\t%s\t%s\t%s\t%s\t%s\t%.03f\t%.03f\t%.03f\t%.03f\t%s\t%.03f\n',subjName,task_id,Presentation,Orientation,Eye,Population,MaskContrast,ThreshElev,ThreshElev_SE,RelMaskContrast,trace,subj_baseline_thresh);
                     output_txt = [output_txt obs_txt] ;
                 end
             end
