@@ -36,7 +36,13 @@ for i_pc = presentation_conditions
     % select the data corresponding to the presentation condition
     if strcmp(i_pc, 'nMono') dat_p = d.nMono;
     elseif strcmp(i_pc, 'nDicho') dat_p = d.nDicho; end
-    dat_base = d.base1 ;
+    
+    % select the appropriate BaselineThresh sub-struct
+    if any(strcmp('avgBase', fieldnames(d))) % if d.avgBase exists, use it (it should exist for OS)
+        dat_base = d.avgBase ;
+    else % otherwise use d.base1, which should exist for SS.
+        dat_base = d.base1 ;
+    end
     
     for i_oc = orient_conds
         % select the data corresponding to the orientation condition
