@@ -16,6 +16,7 @@ import itertools as it
 
 def load_psychophys(pp_fn):
 	df = pd.read_table(pp_fn)
+	df['logThreshElev'] = np.log10(df['ThreshElev'])
 	return df
 
 def load_gaba(gaba_fn):
@@ -51,15 +52,15 @@ def fit_plot(x, y, **kwargs):
 	ax = plt.gca()
 	ax.set_xscale('log')
 	ax.set_yscale('log')
-	ax.get_xaxis().set_major_locator(tick.LogLocator(subs=[1, 3]))
-	ax.get_yaxis().set_major_locator(tick.LogLocator(subs=[1, 3]))
-	ax.get_xaxis().set_major_formatter(tick.ScalarFormatter())
-	ax.get_yaxis().set_major_formatter(tick.ScalarFormatter())
+	#ax.get_xaxis().set_major_locator(tick.LogLocator(subs=[1, 3]))
+	#ax.get_yaxis().set_major_locator(tick.LogLocator(subs=[1, 3]))
+	#ax.get_xaxis().set_major_formatter(tick.ScalarFormatter())
+	#ax.get_yaxis().set_major_formatter(tick.ScalarFormatter())
 	#ax.set_ylim([0.5, np.max([np.max(data[y])+1])])
 	#ax.set_xlim([1, 100])
 	plt.errorbar(data=data, x=x, y=y, yerr=ses,fmt=fmt_obs, **kwargs)
 	plt.errorbar(data=data, x=x, y=predY,fmt=fmt_pred, **kwargs)
-	plt.axhline(y=1,ls='dotted')
+	#plt.axhline(y=1,ls='dotted')
 
 def gaba_plot(x, y, **kwargs):
 	# set up the data frame for plotting, get kwargs etc
@@ -137,9 +138,11 @@ def two_stage_fac_resp(params, C_thiseye, C_othereye, X_thiseye, X_othereye):
 	return k-responses
 
 def linear_nofac_err(params, C_thiseye, C_othereye, X_thiseye, X_othereye):
-	'''Simple linear model of threshold elevation. Only looks at thresholds >1 (i.e. ignores facilitation part of the curve)
-	This function returns the residual between [the prediction specified by the params (y_int, slope) and mask contrast (Xthis/Xother)] and the observed (Cthis)
-	params: y-intercept, slope (of the line -- will be calculated ignoring thresholds <1)
+	'''Simple linear model of threshold elevation. 
+	This function returns the residual between
+	[the prediction specified by the params (y_int, slope) and mask contrast (Xthis/Xother)]
+	and the observed (Cthis)
+	params: y-intercept, slope (of the line)
 	C_thiseye, C_othereye: target contrasts in the two eyes, in percent
 	X_thiseye, X_othereye: mask/surround contrasts in the two eyes, in percent
 
@@ -151,16 +154,12 @@ def linear_nofac_err(params, C_thiseye, C_othereye, X_thiseye, X_othereye):
 	slope = params['slope']#.value
 
 	responses = np.empty(len(C_thiseye))
-	#binsums = np.empty(len(C_thiseye))
 
 	for i,(Cthis, Cother, Xthis, Xother) in enumerate(zip(C_thiseye, C_othereye, X_thiseye, X_othereye)):
 		# we don't have a binocular condition, so one of X_thiseye and X_othereye will be 0
 		assert(Cother==0) #Cthis is always the nonzero one
 		assert(Xthis==0 or Xother==0) #depends on monocular/dichoptic
-		if Cthis > 1:
-			responses[i] = Cthis-(y_int + slope*Xthis + slope*Xother) # since one of the X's will be 0, a term will disappear
-		else: #facilitation, ignore
-			responses[i] = 0
+		responses[i] = Cthis-(y_int + slope*Xthis + slope*Xother) # since one of the X's will be 0, a term will disappear
 
 	return responses
 
@@ -181,7 +180,7 @@ def predict_thresh(func, init_guess, C_other, X_this, X_other, fitted_params):
 	thresh_fit = lf.minimize(func, thresh_params, args=(C_other, X_this, X_other, fitted_params))
 	return thresh_fit.params['C_thiseye'].value
 
-def model_condition(g, err_func, thresh_func, params, ret='preds', supp_only=False):
+def model_condition(g, err_func, thresh_func, params, ret='preds', supp_only=False, log=False):
 	'''Model a condition. In this case, this function is to be applied to each group, where a group is a particular:
 	- Task (OS/SS)
 	- Mask Orientation (Iso/Cross)
@@ -197,7 +196,10 @@ def model_condition(g, err_func, thresh_func, params, ret='preds', supp_only=Fal
 	print(g.name)
 
 	masks = g.RelMaskContrast
-	threshs = g.ThreshElev
+	if log:
+		threshs = g.logThreshElev
+	else:
+		threshs = g.ThreshElev
 	thresh_preds = np.empty_like(threshs)
 	thresh_preds[:] = np.nan
 	if supp_only: #remove the facilitation part of the data, and points before it
@@ -214,7 +216,6 @@ def model_condition(g, err_func, thresh_func, params, ret='preds', supp_only=Fal
 				return g
 			else:
 				return None
-		#print(threshs, '\n', last_fac_idx, '\n', threshs_nofac, masks_nofac)
 
 	assert(np.all(g.Eye==g.Eye.iloc[0])) # Make sure we only are looking at data for one eye
 	Eye = g.Eye.iloc[0]
