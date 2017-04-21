@@ -14,6 +14,7 @@ import scipy.optimize as so
 import lmfit as lf
 import itertools as it
 
+## Functions to read input
 def load_psychophys(pp_fn):
 	df = pd.read_table(pp_fn)
 	df['logThreshElev'] = np.log10(df['ThreshElev'])
@@ -22,6 +23,8 @@ def load_psychophys(pp_fn):
 def load_gaba(gaba_fn):
 	return pd.read_table(gaba_fn)
 
+
+## Plotting functions
 def scaterror_plot(x, y, **kwargs):
 	#'''This function is designed to be called with FacetGrid.map_dataframe() to make faceted plots of various conditions.'''
     #print x, y, kwargs
@@ -90,12 +93,17 @@ def group_facet_plots(df, plot_func, ofn, grouping_vars, row, col, x, y, col_wra
 	print('Plots saved at',ofn)
 	plt.close('all')
 
+
+## Utility functions to convert between db and C%
 def pct_to_db(pct):
 	return 20 * np.log10(pct)
 
 def db_to_pct(db):
 	return 10**(db/20)
 
+
+## functions defining ways to model individual condition data
+### Two-stage model
 def stage1(cmpt_thiseye, cmpt_othereye, mask_thiseye, mask_othereye, w_xm, w_xd):
 		m = 1.3 # stage 1 excitatory exponent
 		S = 1 # stage 1 saturation constant (does it really =1 though?)
@@ -137,6 +145,13 @@ def two_stage_fac_resp(params, C_thiseye, C_othereye, X_thiseye, X_othereye):
 
 	return k-responses
 
+#error function to be minimized to obtain threshElev predictions.
+def two_stage_fac_thresh(thresh_param, C_othereye, X_thiseye, X_othereye, fitted_params): #threshs will be minimized
+	C_thiseye = thresh_param['C_thiseye'].value
+	return two_stage_fac_resp(fitted_params, [C_thiseye], C_othereye, X_thiseye, X_othereye)
+
+
+### Linear model
 def linear_nofac_err(params, C_thiseye, C_othereye, X_thiseye, X_othereye):
 	'''Simple linear model of threshold elevation. 
 	This function returns the residual between
@@ -168,11 +183,7 @@ def linear_nofac_thresh(thresh_param, C_othereye, X_thiseye, X_othereye, fitted_
 	C_thiseye = thresh_param['C_thiseye'].value
 	return linear_nofac_err(fitted_params, [C_thiseye], C_othereye, X_thiseye, X_othereye)
 
-#error function to be minimized to obtain threshElev predictions.
-def two_stage_fac_thresh(thresh_param, C_othereye, X_thiseye, X_othereye, fitted_params): #threshs will be minimized
-	C_thiseye = thresh_param['C_thiseye'].value
-	return two_stage_fac_resp(fitted_params, [C_thiseye], C_othereye, X_thiseye, X_othereye)
-
+## functions that run the model and get predictions, model-agnostic
 def predict_thresh(func, init_guess, C_other, X_this, X_other, fitted_params):
 	'''A wrapper function that accepts a threshold-error minimizing function with arguments in a convenient order'''
 	thresh_params = lf.Parameters()
