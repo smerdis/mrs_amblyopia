@@ -23,6 +23,9 @@ def load_psychophys(pp_fn):
 def load_gaba(gaba_fn):
 	return pd.read_table(gaba_fn)
 
+def load_fmri(fmri_fn):
+	return pd.read_table(fmri_fn)
+
 
 ## Plotting functions
 def scaterror_plot(x, y, **kwargs):
@@ -34,14 +37,14 @@ def scaterror_plot(x, y, **kwargs):
 	ax = plt.gca()
 	ax.set_xscale('log')
 	ax.set_yscale('log')
-	ax.get_xaxis().set_major_locator(tick.LogLocator(subs=[1, 2, 4, 6, 8]))
-	ax.get_yaxis().set_major_locator(tick.LogLocator(subs=[1, 3]))
-	ax.get_xaxis().set_major_formatter(tick.ScalarFormatter())
-	ax.get_yaxis().set_major_formatter(tick.ScalarFormatter())
-	ax.set_ylim([0.7, 4])
-	ax.set_xlim([4, 100])
-	plt.errorbar(data=data, x=x, y=y, yerr=ses,**kwargs)
-	plt.axhline(y=1)
+	ax.get_xaxis().set_major_locator(tick.LogLocator(subs=[1,2,3,4,5,6,7,8,9]))
+	#ax.get_yaxis().set_major_locator(tick.LogLocator(subs=[1, 3]))
+	#ax.get_xaxis().set_major_formatter(tick.ScalarFormatter())
+	#ax.get_yaxis().set_major_formatter(tick.ScalarFormatter())
+	#ax.set_ylim([0.6, 4])
+	#ax.set_xlim([4, 105])
+	plt.errorbar(data=data, x=x, y=y, yerr=ses, fmt='--o', **kwargs)
+	plt.axhline(y=1, ls='dotted', color='gray')
 
 def fit_plot(x, y, **kwargs):
 	# set up the data frame for plotting, get kwargs etc
@@ -60,10 +63,10 @@ def fit_plot(x, y, **kwargs):
 	#ax.get_xaxis().set_major_formatter(tick.ScalarFormatter())
 	#ax.get_yaxis().set_major_formatter(tick.ScalarFormatter())
 	#ax.set_ylim([0.5, np.max([np.max(data[y])+1])])
-	#ax.set_xlim([1, 100])
-	plt.errorbar(data=data, x=x, y=y, yerr=ses,fmt=fmt_obs, **kwargs)
-	plt.errorbar(data=data, x=x, y=predY,fmt=fmt_pred, **kwargs)
-	#plt.axhline(y=1,ls='dotted')
+	#ax.set_xlim([0.5, 10])
+	ax.errorbar(data=data, x=x, y=y, yerr=ses,fmt=fmt_obs, **kwargs)
+	ax.errorbar(data=data, x=x, y=predY,fmt=fmt_pred, **kwargs)
+	ax.axhline(y=1,ls='dotted')
 
 def gaba_plot(x, y, **kwargs):
 	# set up the data frame for plotting, get kwargs etc
@@ -76,20 +79,75 @@ def gaba_plot(x, y, **kwargs):
 	#sns.regplot(data=data, x=x, y=y, fit_reg=True, ci=None, dropna=True)
 	sns.kdeplot(data[x], data[y])
 
+def gaba_vs_psychophys_plot_2line(gv, gr):
+    xvar = "GABA"
+    x_lbl = "GABA (relative to creatine)"
+    yvar = "value"
+    y_lbl = {'BaselineThresh':'Baseline Threshold (C%)',
+            'ThreshPredCritical':'Predicted threshold elevation (multiples of baseline)',
+            'ThreshPredCriticalUnnorm':'Predicted threshold elevation (C%)'}
+    g = sns.lmplot(data=gr, 
+              row='Presentation',col='Population',# facet rows and columns
+              x=xvar, y=yvar,hue="Eye",sharey=False, markers=["o","x"])
+    if gv[2]=="ThreshPredCritical":
+    	g.set(yscale='log')
+    	g.set(ylim=[min(gr[yvar])-.1, 1.1*max(gr[yvar])])
+    g.fig.suptitle(', '.join(gv), fontsize=16, y=0.97)
+    g.fig.subplots_adjust(top=.9, right=.8)
+    g.set_axis_labels(x_lbl, y_lbl[gv[2]])
+    plt.close(g.fig)
+    return(g)
+
+def gaba_vs_psychophys_plot_2line_2eye(gv, gr):
+    xvar = "GABA"
+    x_lbl = "GABA (relative to creatine)"
+    yvar = "Nde-De"
+    y_lbl = {'BaselineThresh':'Interocular Difference in Baseline Threshold (NDE-DE, C%)',
+    		'ThreshPredCritical':'Interocular difference in predicted threshold elevation (NDE-DE, multiples of baseline)',
+            'ThreshPredCriticalUnnorm':'Interocular difference in predicted threshold elevation (NDE-DE, C%)'}
+    g = sns.lmplot(data=gr, 
+                  col='Presentation',hue='Population',# facet rows and columns
+                  x=xvar, y=yvar,sharey=False, size=6, aspect=0.8)
+    #if gv[2]=="ThreshPredCritical":
+    #	g.set(yscale='log')
+    	#g.set(ylim=[min(gr[yvar])-.1, 1.1*max(gr[yvar])])
+    g.fig.suptitle(', '.join(gv), fontsize=16, y=0.97)
+    g.fig.subplots_adjust(top=.9, right=.8)
+    g.set_axis_labels(x_lbl, y_lbl[gv[2]])
+    plt.close(g.fig)
+    return(g)
+
+def gaba_vs_psychophys_plot_4line(gv, gr):
+    xvar = "GABA"
+    x_lbl = "GABA (relative to creatine)"
+    yvar = "value"
+    y_lbl = {'BaselineThresh':'Baseline Threshold (C%)',
+            'ThreshPredCritical':'Predicted Threshold Elevation (multiples of baseline)',
+            'ThreshPredCriticalUnnorm':'Predicted Threshold Elevation (C%)'}
+    g = sns.lmplot(data=gr, 
+                  row='Presentation',col='measure',# facet rows and columns
+                  x=xvar, y=yvar,hue="Trace",sharey=False, ci=False, markers=["o","x", "o", "x"], line_kws={"linestyle": "dotted"})
+    g.fig.suptitle(gv, fontsize=16, y=0.97)
+    g.fig.subplots_adjust(top=.9, right=.8)
+    g.set_axis_labels(x_lbl, y_lbl[gv[2]])
+    g.fig.set_figwidth(10)
+    plt.close(g.fig)
+    return(g)
+
 def group_facet_plots(df, plot_func, ofn, grouping_vars, row, col, x, y, col_wrap=None, hue=None, legend=True, **kwargs):
 	with PdfPages(ofn) as pdf:
 		grouped = df.groupby(grouping_vars)
 		for gv, gr in grouped:
-			print('Plotting %s'%'.'.join(gv))
 			g = sns.FacetGrid(gr, row=row, col=col, hue=hue, col_wrap=col_wrap, size=3, aspect=1.5, sharex=False, sharey=False, margin_titles=True)
 			g = g.map_dataframe(plot_func,x,y,**kwargs)
+			print('Plotting %s'%'.'.join(gv))
 			if legend:
 				g = g.add_legend()
-			g.fig.suptitle(gv, fontsize=16, y=0.97)
+			g.fig.suptitle(gv, fontsize=14, y=0.97)
 			g.fig.subplots_adjust(top=.9, right=.8)
 			g.set_axis_labels(x, y)
 			pdf.savefig(g.fig)
-			plt.clf()
+			plt.close(g.fig)
 	print('Plots saved at',ofn)
 	plt.close('all')
 
@@ -191,7 +249,7 @@ def predict_thresh(func, init_guess, C_other, X_this, X_other, fitted_params):
 	thresh_fit = lf.minimize(func, thresh_params, args=(C_other, X_this, X_other, fitted_params))
 	return thresh_fit.params['C_thiseye'].value
 
-def model_condition(g, err_func, thresh_func, params, ret='preds', supp_only=False, log=False):
+def model_condition(g, err_func, thresh_func, params, ret='preds', predtype='linear', supp_only=False, log=False):
 	'''Model a condition. In this case, this function is to be applied to each group, where a group is a particular:
 	- Task (OS/SS)
 	- Mask Orientation (Iso/Cross)
@@ -204,7 +262,7 @@ def model_condition(g, err_func, thresh_func, params, ret='preds', supp_only=Fal
 	if ret='weights', returns the weights (and any other fitted parameters) for this group.
 	the default is to return the predicted thresholds (ret='preds')'''
 
-	print(g.name)
+	print(g.name, g.RelMCToPred.iat[0])
 
 	masks = g.RelMaskContrast
 	if log:
@@ -232,6 +290,8 @@ def model_condition(g, err_func, thresh_func, params, ret='preds', supp_only=Fal
 	Eye = g.Eye.iloc[0]
 	assert(np.all(g.Presentation==g.Presentation.iloc[0])) # again, one condition only
 	Presentation = g.Presentation.iloc[0]
+	assert(np.all(g.BaselineThresh==g.BaselineThresh.iloc[0])) # has to be true since we will compute un-normalized threshelev (=C%)
+	BaselineThresh = g.BaselineThresh.iloc[0]
 
 	if Presentation=='nDicho':
 		contrasts = (threshs.as_matrix(), np.zeros_like(threshs), np.zeros_like(masks), masks.as_matrix())
@@ -243,8 +303,13 @@ def model_condition(g, err_func, thresh_func, params, ret='preds', supp_only=Fal
 	pfit.pretty_print()
 	#params = fmin(err_func, np.zeros(n_free), args=contrasts) #fitted weights of free parameters of the model, as implemented by err_func
 	#print(*zip(free_params,params))
-	threshpred = [predict_thresh(thresh_func, a,[b],[c],[d],pfit) for a,b,c,d in zip(*contrasts)]
-
+	if predtype=='linear':
+		pv = pfit.valuesdict()
+		threshpred = [pv['y_int'] + relmc*pv['slope'] for relmc in masks]
+		ThreshPredBinCenter = pv['y_int'] + g.RelMCToPred.iat[0]*pv['slope']
+		ThreshPredBinCenterUnnorm = ThreshPredBinCenter * BaselineThresh
+	else:
+		threshpred = [predict_thresh(thresh_func, a,[b],[c],[d],pfit) for a,b,c,d in zip(*contrasts)]
 	if ret=='preds':
 		if supp_only:
 			thresh_preds[last_fac_idx+1:] = threshpred
@@ -253,4 +318,8 @@ def model_condition(g, err_func, thresh_func, params, ret='preds', supp_only=Fal
 		g['ThreshPred'] = thresh_preds
 		return g
 	elif ret=='weights':
-		return pd.Series(pfit.valuesdict(), index=params.keys())
+		retvars = pd.Series(pfit.valuesdict(), index=params.keys())
+		if ThreshPredBinCenter:
+			retvars['ThreshPredCritical'] = ThreshPredBinCenter
+			retvars['ThreshPredCriticalUnnorm'] = ThreshPredBinCenterUnnorm
+		return retvars
