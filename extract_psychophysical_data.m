@@ -14,7 +14,7 @@ ss_fn = [data_dir '/SS_fit_summary_n35_061416_4.5Bin_iqr.mat'] ;
 % os_fn = [data_dir '/OS_stair_summary_n36_052316_3.5Bin_none.mat'] ;
 os_fn = [data_dir '/OS_fit_summary_n36_061416_4.5Bin_iqr.mat'];
 
-output_fn = 'supp_data_individual_20170411.txt';
+output_fn = 'supp_data_individual_20170427.txt';
 
 %% Surround suppression task
 load(ss_fn) ; % should yield 'SS'

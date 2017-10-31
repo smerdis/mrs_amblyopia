@@ -18,7 +18,7 @@ eye_conds = {'Nde', 'De'};
 if grouped
     output_cols = {'Task', 'Presentation', 'Orientation', 'Eye', 'Population', 'Trace', 'Bin', 'ThreshElev', 'ThreshElev_SE', 'RelMaskContrast'};
 else % if we want data for each subject, add a column to identify them (initials)
-    output_cols = {'Subject', 'Task', 'Presentation', 'Orientation', 'Eye', 'Population', 'MaskContrast', 'ThreshElev', 'ThreshElev_SE', 'RelMaskContrast', 'Trace', 'BaselineThresh'};
+    output_cols = {'Subject', 'Task', 'Presentation', 'Orientation', 'Eye', 'Population', 'MaskContrast', 'ThreshElev', 'ThreshElev_SE', 'RelMaskContrast', 'Trace', 'BaselineThresh', 'BinCenterRelMaskContrast','BinNumber'};
     
     % also let's define what we expect the individual subject data to look like
     expected_lbls = {'subj'  'maskCtr'  'thresh'  'stderr'  'relMaskCtr'};
@@ -108,7 +108,20 @@ for i_pc = presentation_conditions
                     ThreshElev_SE = df(i_r, sem_col);
                     RelMaskContrast = df(i_r, rel_contrast_col);
                     trace = [Population '-' Eye];
-                    obs_txt = sprintf('%s\t%s\t%s\t%s\t%s\t%s\t%.03f\t%.03f\t%.03f\t%.03f\t%s\t%.03f\n',subjName,task_id,Presentation,Orientation,Eye,Population,MaskContrast,ThreshElev,ThreshElev_SE,RelMaskContrast,trace,subj_baseline_thresh);
+                    % update 4/27/17 -- we want to grab the bin centers
+                    % (which were used to group individual data by
+                    % RelMaskContrast) from
+                    % {task}.all.{presentation}.{orientation}.{eye}.con_binMean/amb_binMean.relMaskCtr
+                    % and make it the last column here.
+                    if strcmp(Population, 'Control') dat_poep_bin = dat_poe.con_binMean.relMaskCtr;
+                    elseif strcmp(Population, 'Amblyope') dat_poep_bin = dat_poe.amb_binMean.relMaskCtr; end
+                    pop_binCenters = dat_poep_bin.data(1, :) ;
+                    % find the closest bin center and use that as the
+                    % BinCenterRelMaskContrast column - TODO verify
+                    [~, idx_binCenter] = min(abs(pop_binCenters-RelMaskContrast)) ;
+                    obs_binCenter = pop_binCenters(idx_binCenter) ;
+                    % Also add the bin number (increasing)
+                    obs_txt = sprintf('%s\t%s\t%s\t%s\t%s\t%s\t%.03f\t%.03f\t%.03f\t%.03f\t%s\t%.03f\t%.03f\t%d\n',subjName,task_id,Presentation,Orientation,Eye,Population,MaskContrast,ThreshElev,ThreshElev_SE,RelMaskContrast,trace,subj_baseline_thresh,obs_binCenter,idx_binCenter);
                     output_txt = [output_txt obs_txt] ;
                 end
             end
