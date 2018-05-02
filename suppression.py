@@ -98,7 +98,7 @@ def gaba_vs_psychophys_plot_2line(gv, gr):
     plt.close(g.fig)
     return(g)
 
-def gaba_vs_psychophys_plot_2line_2eye(gv, gr):
+def gaba_vs_psychophys_plot_2line_2eye(gv, gr, **kwargs):
     xvar = "GABA"
     x_lbl = "GABA (relative to creatine)"
     yvar = "Nde-De"
@@ -107,13 +107,13 @@ def gaba_vs_psychophys_plot_2line_2eye(gv, gr):
             'ThreshPredCriticalUnnorm':'Interocular difference in predicted threshold elevation (NDE-DE, C%)'}
     g = sns.lmplot(data=gr, 
                   col='Presentation',hue='Population',# facet rows and columns
-                  x=xvar, y=yvar,sharey=False, size=6, aspect=0.8)
+                  x=xvar, y=yvar,sharey=False, **kwargs)
     #if gv[2]=="ThreshPredCritical":
     #	g.set(yscale='log')
     	#g.set(ylim=[min(gr[yvar])-.1, 1.1*max(gr[yvar])])
-    g.fig.suptitle(', '.join(gv), fontsize=16, y=0.97)
+    g.fig.suptitle(':'.join(gv), fontsize=16, y=0.97)
     g.fig.subplots_adjust(top=.9, right=.8)
-    g.set_axis_labels(x_lbl, y_lbl[gv[2]])
+    g.set_axis_labels(x_lbl, y_lbl[gv[-1]])
     plt.close(g.fig)
     return(g)
 
@@ -138,14 +138,16 @@ def group_facet_plots(df, plot_func, ofn, grouping_vars, row, col, x, y, col_wra
 	with PdfPages(ofn) as pdf:
 		grouped = df.groupby(grouping_vars)
 		for gv, gr in grouped:
-			g = sns.FacetGrid(gr, row=row, col=col, hue=hue, col_wrap=col_wrap, size=3, aspect=1.5, sharex=False, sharey=False, margin_titles=True)
+			g = sns.FacetGrid(gr, row=row, col=col, hue=hue, col_wrap=col_wrap, size=6, aspect=1.5, sharex=False, sharey=False, margin_titles=True)
 			g = g.map_dataframe(plot_func,x,y,**kwargs)
 			print('Plotting %s'%'.'.join(gv))
 			if legend:
 				g = g.add_legend()
-			g.fig.suptitle(gv, fontsize=14, y=0.97)
+			g.fig.suptitle(':'.join(gv), fontsize=14, y=0.97)
 			g.fig.subplots_adjust(top=.9, right=.8)
-			g.set_axis_labels(x, y)
+			x_lbl = "Relative Mask Contrast" if x=="RelMaskContrast" else x
+			y_lbl = "Threshold Elevation (multiples of baseline)" if y=="ThreshElev" else y
+			g.set_axis_labels(x_lbl, y_lbl)
 			pdf.savefig(g.fig)
 			plt.close(g.fig)
 	print('Plots saved at',ofn)
