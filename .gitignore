@@ -6,3 +6,5 @@ plots/*
 *.mat
 *.ipynb_*
 *.DS_Store*
+cleanData/
+ForArjun/
