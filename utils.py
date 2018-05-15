@@ -4,6 +4,25 @@ from scipy.io import loadmat
 import lmfit as lf
 import glob
 
+# functions to convert between db and Michelson contrast
+def pct_to_db(pct):
+    return 20 * np.log10(pct)
+
+def db_to_pct(db):
+    return 10**(db/20)
+
+## Functions to read input
+def load_psychophys(pp_fn):
+    df = pd.read_table(pp_fn)
+    df['logThreshElev'] = np.log10(df['ThreshElev'])
+    return df
+
+def load_gaba(gaba_fn):
+    gdf = pd.read_table(gaba_fn)
+    return gdf[gdf.Presentation=='occ_binoc'] # this is the gaba measure we want to use
+
+def load_fmri(fmri_fn):
+    return pd.read_table(fmri_fn)
 
 def load_individual_data(data_file, columns):
     """Function that loads individual psychophysics data stored in .mat files.
@@ -94,7 +113,6 @@ def load_all_data(globstr, loader_func):
     for data_file in data_files:
         df = pd.concat([df, loader_func(data_file)])
     return df
-
 
 def summarize_conditions(df, gvars):
     """

@@ -20,8 +20,8 @@ def two_stage_parameters():
     params = lf.Parameters()
     params.add('m', value=1.3, vary=False)
     params.add('S', value=1, vary=False)
-    params.add('w_m', value=1, min=0.0, max=10.0, vary=True)
-    params.add('w_d', value=1, min=0.0, max=10.0, vary=True)
+    params.add('w_m', value=1, min=0.0, vary=True)
+    params.add('w_d', value=1, min=0.0, vary=True)
     params.add('a', value=0, vary=True)
     params.add('k', value=0.2, vary=False)
     params.add('p', value=8, vary=False)
@@ -29,7 +29,7 @@ def two_stage_parameters():
     params.add('Z', value=.0085, vary=False)
     return params
 
-def two_stage_response(params, C_thiseye, C_othereye, X_thiseye, X_othereye, n, c):
+def two_stage_response_err(params, C_thiseye, C_othereye, X_thiseye, X_othereye):
     """
     Two-stage model of contrast response with facilitation
     C_thiseye, C_othereye: target contrasts in the two eyes, in percent
@@ -60,7 +60,7 @@ def two_stage_response(params, C_thiseye, C_othereye, X_thiseye, X_othereye, n, 
     errors = np.empty(len(C_thiseye))
     likelihoods = np.empty(len(C_thiseye))
 
-    for i,(CDe, CNde, XDe, XNde, ntrials, ncorrect) in enumerate(zip(C_thiseye, C_othereye, X_thiseye, X_othereye, n, c)):
+    for i,(CDe, CNde, XDe, XNde) in enumerate(zip(C_thiseye, C_othereye, X_thiseye, X_othereye)):
         stage1De_t = stage1(CDe, CNde, XDe, XNde, m, S, w_xm, w_xd)
         stage1Nde_t = stage1(CNde, CDe, XNde, XDe, m, S, w_xm, w_xd)
         stage1De_m = stage1(XDe, XNde, CDe, CNde, m, S, w_xm, w_xd)
@@ -74,12 +74,16 @@ def two_stage_response(params, C_thiseye, C_othereye, X_thiseye, X_othereye, n, 
         responses[i] = resp_tm
 
         # calculate some additional stuff that we could use
-        dprimes[i] = resp_tm * k # not sure about this...
-        predicted_pct_correct[i] = norm.cdf(dprimes[i])
-        errors[i] = predicted_pct_correct[i]-(ncorrect/ntrials)
-        likelihoods[i] = loglikelihood(ntrials, ncorrect, predicted_pct_correct[i])
+        #dprimes[i] = resp_tm * k # not sure about this...
+        #predicted_pct_correct[i] = norm.cdf(dprimes[i])
+        #errors[i] = predicted_pct_correct[i]-(ncorrect/ntrials)
+        #likelihoods[i] = loglikelihood(ntrials, ncorrect, predicted_pct_correct[i])
 
-    return likelihoods
+    return k-responses
+
+def two_stage_thresh(thresh_param, C_othereye, X_thiseye, X_othereye, fitted_params): #threshs will be minimized
+    C_thiseye = thresh_param['C_thiseye'].value
+    return two_stage_response_err(fitted_params, [C_thiseye], C_othereye, X_thiseye, X_othereye)
 
 def loglikelihood(n, c, predicted_pct_correct):
     """
