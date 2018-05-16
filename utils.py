@@ -126,9 +126,16 @@ def summarize_conditions(df, gvars):
 
     return grouped, condensed_df
 
-def model_condition(g, err_func, params):
+def predict_thresh(func, init_guess, C_other, X_this, X_other, fitted_params):
+    '''A wrapper function that accepts a threshold-error minimizing function with arguments in a convenient order'''
+    thresh_params = lf.Parameters()
+    thresh_params.add(name='C_thiseye', value=init_guess, vary=True)
+    thresh_fit = lf.minimize(func, thresh_params, args=(C_other, X_this, X_other, fitted_params))
+    return thresh_fit.params['C_thiseye'].value
+
+def model_trials(g, err_func, params):
     """
-    Model a condition. This function is to be applied to each group of observations, where a group is a particular:
+    Model the trials within a condition. This function is to be applied to each group of observations, where a group is a particular:
     - Subject (individual)
     - Task (OS/SS)
     - Mask Orientation (Iso/Cross)
@@ -160,3 +167,64 @@ def model_condition(g, err_func, params):
     params_fit = lf.minimize(err_func, params, args=contrasts)
     pfit = params_fit.params
     return pd.Series(pfit.valuesdict(), index=params.keys())
+
+def model_threshold(g, err_func, thresh_func, params, ret='preds', predtype='linear'):
+    '''Model a condition. In this case, this function is to be applied to each group, where a group is a particular:
+    - Task (OS/SS)
+    - Mask Orientation (Iso/Cross)
+    - Eye (which viewed the target, De/Nde)
+    - Population (Con/Amb)
+
+    (both Presentations, nMono and nDicho, will be in the group)
+
+    The values that are then modeled are RelMaskContrast (x) vs ThreshElev (y)
+
+    if ret='weights', returns the weights (and any other fitted parameters) for this group.
+    the default is to return the predicted thresholds (ret='preds')'''
+
+    print(g.name)
+
+    assert(np.all(g.Eye==g.Eye.iloc[0])) # Make sure we only are looking at data for one eye
+    Eye = g.Eye.iloc[0]
+
+    assert(np.all(g.BaselineThresh==g.BaselineThresh.iloc[0])) # has to be true since we will compute un-normalized threshelev (=C%)
+    BaselineThresh = g.BaselineThresh.iloc[0]
+
+    conditions = g.groupby(['Presentation'])
+    # set up empty ndarrays to hold the arguments that will be passed to the model
+    thresh_this, thresh_other, mask_this, mask_other = np.empty(0), np.empty(0), np.empty(0), np.empty(0)
+    # build the input arrays
+    for Presentation, pres_g in conditions:
+        assert(np.all(pres_g.Presentation==pres_g.Presentation.iloc[0])) # again, one condition only
+
+        # collect the masks and thresholds, put them in the right order (which depends on Presentation) to pass to the model
+        masks = pres_g.RelMaskContrast
+        threshs = pres_g.ThreshElev
+
+        if Presentation=='nDicho':
+            tt, to, mt, mo = (threshs.as_matrix(), np.zeros_like(threshs), np.zeros_like(masks), masks.as_matrix())
+        elif Presentation=='nMono':
+            tt, to, mt, mo = (threshs.as_matrix(), np.zeros_like(threshs), masks.as_matrix(), np.zeros_like(masks))
+        thresh_this = np.hstack((thresh_this, tt))
+        thresh_other = np.hstack((thresh_other, to))
+        mask_this = np.hstack((mask_this, mt))
+        mask_other = np.hstack((mask_other, mo))
+
+    contrasts = (thresh_this, thresh_other, mask_this, mask_other)
+    #print(contrasts)
+    params_fit = lf.minimize(err_func, params, args=contrasts)
+    pfit = params_fit.params
+    pfit.pretty_print()
+    threshpred = [predict_thresh(thresh_func, a,[b],[c],[d],pfit) for a,b,c,d in zip(*contrasts)]
+    if ret=='preds':
+        g['ThreshPred'] = threshpred
+        return g
+    elif ret=='weights':
+        retvars = pd.Series(pfit.valuesdict(), index=params.keys())
+        try:
+            if ThreshPredBinCenter: # This is set if we use the linear model. TODO clean up
+                retvars['ThreshPredCritical'] = ThreshPredBinCenter
+                retvars['ThreshPredCriticalUnnorm'] = ThreshPredBinCenterUnnorm
+        except NameError:
+            pass
+        return retvars
