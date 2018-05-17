@@ -22,7 +22,7 @@ def two_stage_parameters():
     params.add('S', value=1, vary=False)
     params.add('w_m', value=1, min=0.0, vary=True)
     params.add('w_d', value=1, min=0.0, vary=True)
-    params.add('a', value=0, vary=True)
+    params.add('a', value=0, min=0.0, vary=True)
     params.add('k', value=0.2, vary=False)
     params.add('p', value=8, vary=False)
     params.add('q', value=6.5, vary=False)
@@ -43,6 +43,8 @@ def two_stage_response_err(params, C_thiseye, C_othereye, X_thiseye, X_othereye)
     """
 
     from scipy.stats import norm
+
+    #print(params, C_thiseye, C_othereye, X_thiseye, X_othereye)
 
     m = params['m'] # stage 1 excitatory constant
     S = params['S'] # stage 1 suppressive constant
