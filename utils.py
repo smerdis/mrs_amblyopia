@@ -128,8 +128,9 @@ def summarize_conditions(df, gvars):
 
 def predict_thresh(func, init_guess, C_other, X_this, X_other, fitted_params):
     '''A wrapper function that accepts a threshold-error minimizing function with arguments in a convenient order'''
+    #print(init_guess, np.any(np.isnan(fitted_params)))
     thresh_params = lf.Parameters()
-    thresh_params.add(name='C_thiseye', value=init_guess, vary=True)
+    thresh_params.add(name='C_thiseye', value=init_guess, min=0.0, vary=True)
     thresh_fit = lf.minimize(func, thresh_params, args=(C_other, X_this, X_other, fitted_params))
     return thresh_fit.params['C_thiseye'].value
 
@@ -171,11 +172,10 @@ def model_trials(g, err_func, params):
 def model_threshold(g, err_func, thresh_func, params, ret='preds', predtype='linear'):
     '''Model a condition. In this case, this function is to be applied to each group, where a group is a particular:
     - Task (OS/SS)
-    - Mask Orientation (Iso/Cross)
     - Eye (which viewed the target, De/Nde)
     - Population (Con/Amb)
 
-    (both Presentations, nMono and nDicho, will be in the group)
+    (both Presentations, nMono and nDicho, will be in the group, as will both Orientations (Iso/Cross))
 
     The values that are then modeled are RelMaskContrast (x) vs ThreshElev (y)
 
