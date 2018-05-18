@@ -1,95 +1,54 @@
 import numpy as np
 import pandas as pd
 
-from bokeh.layouts import row, column
+from bokeh.layouts import row, column, gridplot
 from bokeh.plotting import figure, show, ColumnDataSource
-from bokeh.models import BoxSelectTool, LassoSelectTool, Spacer, HoverTool
-from bokeh.palettes import Category10
+from bokeh.models import BoxSelectTool, LassoSelectTool, Spacer, HoverTool, CDSView, GroupFilter
+from bokeh.palettes import Category20
+from bokeh.transform import factor_cmap
 
 
-def plot_suppressive_weights(os_fitted_df):
+def plot_fitted_parameters(fitted_df, x, y, color_factor, plot_factor):
     """
-    Plot the fitted w_m and w_d parameters of the two-stage model for all participants.
+    Plot the fitted model parameters specified by x and y
+    in a different color for each level of color_factor,
+    on a different plot for each level of plot_factor
     """
-    TOOLS="pan,wheel_zoom,box_select,lasso_select,reset"
+    
+    # Load the data
+    source = ColumnDataSource(fitted_df)
+    plot_factor_levels = np.unique(fitted_df[plot_factor])
+    views = [CDSView(source=source, filters=[GroupFilter(column_name=plot_factor, group=lvl)]) for lvl in plot_factor_levels]
 
-    # create the scatter plot
-    p = figure(tools=TOOLS, plot_width=800, plot_height=600, min_border=10, min_border_left=50,
-               toolbar_location="above",
-               x_axis_label="Monocular suppressive weight",
-               y_axis_label="Interocular suppressive weight",
-               title="Monocular and interocular suppressive weights")
-    p.background_fill_color = "#fafafa"
-    p.select(BoxSelectTool).select_every_mousemove = False
-    p.select(LassoSelectTool).select_every_mousemove = False
+    # define common attributes of the various plots
+    plot_size_and_tools = {'plot_height': 400, 'plot_width': 400, 'min_border':10, 'min_border_left':50, 'toolbar_location':'above',
+                        'tools':['pan','wheel_zoom','box_select','lasso_select','reset']}
 
-    plot_groups = os_fitted_df.groupby(["Trace"]) # should be less than 10 combos of this or else next line will fail
-    for (gv, g), c in zip(plot_groups, Category10[len(plot_groups)]):
-        source = ColumnDataSource(g[g["Orientation"]=="Iso"])
-        r = p.circle('w_m', 'w_d', size=10, color=c, alpha=0.6, source=source, legend="Trace")
-        source2 = ColumnDataSource(g[g["Orientation"]=="Cross"])
-        r = p.square('w_m', 'w_d', size=10, color=c, alpha=0.6, source=source2, legend="Trace")
+    ps = []
+    for v in views:
+        f = v.filters
+        plot_factor_level = v.filters[0].group
+        # create the scatter plot
+        p = figure(title=f"{plot_factor}: {plot_factor_level}", **plot_size_and_tools)
+        p.background_fill_color = "#fafafa"
+        p.select(BoxSelectTool).select_every_mousemove = False
+        p.select(LassoSelectTool).select_every_mousemove = False
 
-    hover = HoverTool(tooltips=[("Subject", "@Subject"),
-                                ("Eye", "@Eye"),
-                                ("Orientation", "@Orientation"),
-                                ("Monocular suppressive weight", "@w_m"),
-                                ("Interocular suppressive weight", "@w_d")],
-                      mode="mouse", point_policy="follow_mouse", renderers=[r])
+        distinct_groups = np.unique(fitted_df[color_factor])
+        n_distinct_groups = len(distinct_groups)
+        r = p.circle(x, y, source=source, view=v, size=10, 
+            color=factor_cmap(color_factor, palette=Category20[n_distinct_groups], factors=distinct_groups),
+            legend=color_factor,
+            alpha=0.6)
 
-    p.add_tools(hover)
+        hover = HoverTool(tooltips=[("Subject", "@Subject"),
+                                    ("Eye", "@Eye"),
+                                    ("Orientation", "@Orientation"),
+                                    ("Monocular suppressive weight", f"@{x}"),
+                                    ("Interocular suppressive weight", f"@{y}")],
+                          mode="mouse", point_policy="follow_mouse", renderers=[r])
 
-    # create the horizontal histogram
-    hhist, hedges = np.histogram(os_fitted_df.w_m, bins=200)
-    hzeros = np.zeros(len(hedges)-1)
-    hmax = max(hhist)*1.1
+        p.add_tools(hover)
+        ps.append(p)
 
-    LINE_ARGS = dict(color="#3A5785", line_color=None)
-
-    ph = figure(toolbar_location=None, plot_width=p.plot_width, plot_height=200, x_range=p.x_range,
-                y_range=(-hmax, hmax), min_border=10, min_border_left=50, y_axis_location="right")
-    ph.xgrid.grid_line_color = None
-    ph.yaxis.major_label_orientation = np.pi/4
-    ph.background_fill_color = "#fafafa"
-
-    ph.quad(bottom=0, left=hedges[:-1], right=hedges[1:], top=hhist, color="white", line_color="#3A5785")
-    hh1 = ph.quad(bottom=0, left=hedges[:-1], right=hedges[1:], top=hzeros, alpha=0.5, **LINE_ARGS)
-    hh2 = ph.quad(bottom=0, left=hedges[:-1], right=hedges[1:], top=hzeros, alpha=0.1, **LINE_ARGS)
-
-    # create the vertical histogram
-    vhist, vedges = np.histogram(os_fitted_df.w_d, bins=200)
-    vzeros = np.zeros(len(vedges)-1)
-    vmax = max(vhist)*1.1
-
-    pv = figure(toolbar_location=None, plot_width=200, plot_height=p.plot_height, x_range=(-vmax, vmax),
-                y_range=p.y_range, min_border=10, y_axis_location="right")
-    pv.ygrid.grid_line_color = None
-    pv.xaxis.major_label_orientation = np.pi/4
-    pv.background_fill_color = "#fafafa"
-
-    pv.quad(left=0, bottom=vedges[:-1], top=vedges[1:], right=vhist, color="white", line_color="#3A5785")
-    vh1 = pv.quad(left=0, bottom=vedges[:-1], top=vedges[1:], right=vzeros, alpha=0.5, **LINE_ARGS)
-    vh2 = pv.quad(left=0, bottom=vedges[:-1], top=vedges[1:], right=vzeros, alpha=0.1, **LINE_ARGS)
-
-    layout = column(row(p, pv), row(ph, Spacer(width=200, height=200)))
-
-    def update(attr, old, new):
-        inds = np.array(new['1d']['indices'])
-        if len(inds) == 0 or len(inds) == len(os_fitted_df['w_m']):
-            hhist1, hhist2 = hzeros, hzeros
-            vhist1, vhist2 = vzeros, vzeros
-        else:
-            neg_inds = np.ones_like(os_fitted_df['w_m'], dtype=np.bool)
-            neg_inds[inds] = False
-            hhist1, _ = np.histogram(os_fitted_df['w_m'][inds], bins=hedges)
-            vhist1, _ = np.histogram(os_fitted_df['w_d'][inds], bins=vedges)
-            hhist2, _ = np.histogram(os_fitted_df['w_m'][neg_inds], bins=hedges)
-            vhist2, _ = np.histogram(os_fitted_df['w_d'][neg_inds], bins=vedges)
-
-        hh1.data_source.data["top"]   =  hhist1
-        hh2.data_source.data["top"]   = -hhist2
-        vh1.data_source.data["right"] =  vhist1
-        vh2.data_source.data["right"] = -vhist2
-
-    r.data_source.on_change('selected', update)
-    return r, layout
+    return gridplot([ps])
