@@ -23,15 +23,16 @@ def plot_suppressive_weights(os_fitted_df):
     p.select(BoxSelectTool).select_every_mousemove = False
     p.select(LassoSelectTool).select_every_mousemove = False
 
-    plot_groups = os_fitted_df.groupby(["Eye", "Orientation"])
-    for (gv, g), c in zip(plot_groups, Category10[4]):
-        source = ColumnDataSource(os_fitted_df)
-        r = p.circle('w_m', 'w_d', size=10, color=c, alpha=0.6, source=source)
+    plot_groups = os_fitted_df.groupby(["Trace"]) # should be less than 10 combos of this or else next line will fail
+    for (gv, g), c in zip(plot_groups, Category10[len(plot_groups)]):
+        source = ColumnDataSource(g[g["Orientation"]=="Iso"])
+        r = p.circle('w_m', 'w_d', size=10, color=c, alpha=0.6, source=source, legend="Trace")
+        source2 = ColumnDataSource(g[g["Orientation"]=="Cross"])
+        r = p.square('w_m', 'w_d', size=10, color=c, alpha=0.6, source=source2, legend="Trace")
 
     hover = HoverTool(tooltips=[("Subject", "@Subject"),
                                 ("Eye", "@Eye"),
                                 ("Orientation", "@Orientation"),
-                                ("Presentation", "@Presentation"),
                                 ("Monocular suppressive weight", "@w_m"),
                                 ("Interocular suppressive weight", "@w_d")],
                       mode="mouse", point_policy="follow_mouse", renderers=[r])
