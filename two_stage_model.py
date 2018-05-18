@@ -8,10 +8,6 @@
 import numpy as np
 import lmfit as lf
 
-def stage1(cmpt_thiseye, cmpt_othereye, mask_thiseye, mask_othereye, m=1.3, S=1, w_xm=1, w_xd=1):
-    """First (pre-binocular-summation) stage of the two-stage model"""
-    return (cmpt_thiseye**m)/(S + cmpt_thiseye + cmpt_othereye + w_xm*mask_thiseye + w_xd*mask_othereye)
-
 def two_stage_parameters():
     """
     Return the parameters of the two-stage model as a lmfit Parameters object.
@@ -28,6 +24,10 @@ def two_stage_parameters():
     params.add('q', value=6.5, vary=False)
     params.add('Z', value=.0085, vary=False)
     return params
+
+def stage1(cmpt_thiseye, cmpt_othereye, mask_thiseye, mask_othereye, m=1.3, S=1, w_xm=1, w_xd=1):
+    """First (pre-binocular-summation) stage of the two-stage model"""
+    return (cmpt_thiseye**m)/(S + cmpt_thiseye + cmpt_othereye + w_xm*mask_thiseye + w_xd*mask_othereye)
 
 def two_stage_response_err(params, C_thiseye, C_othereye, X_thiseye, X_othereye):
     """
@@ -87,14 +87,14 @@ def two_stage_thresh(thresh_param, C_othereye, X_thiseye, X_othereye, fitted_par
     C_thiseye = thresh_param['C_thiseye'].value
     return two_stage_response_err(fitted_params, [C_thiseye], C_othereye, X_thiseye, X_othereye)
 
-def loglikelihood(n, c, predicted_pct_correct):
-    """
-    Calculate log-likelihood of the parameters that predicted predicted_pct_correct for a condition with n trials and c corrects (observed)
-    """
-    if c==n or c==0 or predicted_pct_correct==0 or predicted_pct_correct==1:
-        return 0
-    else:
-        c_pred = np.round(predicted_pct_correct*n)
-        ll_pred = (c_pred * np.log(predicted_pct_correct)) + ((n-c_pred)*(np.log(1-predicted_pct_correct)))
-        ll_obs = (c*np.log(c/n)) + ((n-c)*np.log(1-(c/n)))
-        return ll_pred-ll_obs # since lf.minimize() minimizes the sum of squares, return a residual
+# def loglikelihood(n, c, predicted_pct_correct):
+#     """
+#     Calculate log-likelihood of the parameters that predicted predicted_pct_correct for a condition with n trials and c corrects (observed)
+#     """
+#     if c==n or c==0 or predicted_pct_correct==0 or predicted_pct_correct==1:
+#         return 0
+#     else:
+#         c_pred = np.round(predicted_pct_correct*n)
+#         ll_pred = (c_pred * np.log(predicted_pct_correct)) + ((n-c_pred)*(np.log(1-predicted_pct_correct)))
+#         ll_obs = (c*np.log(c/n)) + ((n-c)*np.log(1-(c/n)))
+#         return ll_pred-ll_obs # since lf.minimize() minimizes the sum of squares, return a residual
