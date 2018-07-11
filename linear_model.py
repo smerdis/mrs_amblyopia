@@ -2,13 +2,13 @@ import numpy as np
 import lmfit as lf
 
 ### Linear model
-def linear_model_parameters():
+def parameters():
     lm_params = lf.Parameters()
     lm_params.add('y_int', value=1, vary=True)
     lm_params.add('slope', value=1, vary=True)
     return lm_params
 
-def linear_nofac_err(params, C_thiseye, C_othereye, X_thiseye, X_othereye):
+def err(params, C_thiseye, C_othereye, X_thiseye, X_othereye):
     '''Simple linear model of threshold elevation. 
     This function returns the residual between
     [the prediction specified by the params (y_int, slope) and mask contrast (Xthis/Xother)]
@@ -35,6 +35,6 @@ def linear_nofac_err(params, C_thiseye, C_othereye, X_thiseye, X_othereye):
     return responses
 
 #error function to be minimized to obtain threshElev predictions.
-def linear_nofac_thresh(thresh_param, C_othereye, X_thiseye, X_othereye, fitted_params): #threshs will be minimized
+def thresh(thresh_param, C_othereye, X_thiseye, X_othereye, fitted_params): #threshs will be minimized
     C_thiseye = thresh_param['C_thiseye'].value
-    return linear_nofac_err(fitted_params, [C_thiseye], C_othereye, X_thiseye, X_othereye)
+    return err(fitted_params, [C_thiseye], C_othereye, X_thiseye, X_othereye)
