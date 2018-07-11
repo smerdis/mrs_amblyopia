@@ -169,18 +169,19 @@ def model_trials(g, err_func, params):
     pfit = params_fit.params
     return pd.Series(pfit.valuesdict(), index=params.keys())
 
-def model_threshold(g, err_func, thresh_func, params, ret='preds', predtype='linear'):
-    '''Model a condition. In this case, this function is to be applied to each group, where a group is a particular:
+def model_threshold(g, err_func, thresh_func, params, ret='preds'):
+    '''
+    Model a condition. This function is to be applied to each group, where a group is a particular:
     - Task (OS/SS)
     - Eye (which viewed the target, De/Nde)
     - Population (Con/Amb)
-
-    (both Presentations, nMono and nDicho, will be in the group, as will both Orientations (Iso/Cross))
+    - [other grouping variables, possibly]
 
     The values that are then modeled are RelMaskContrast (x) vs ThreshElev (y)
 
     if ret='weights', returns the weights (and any other fitted parameters) for this group.
-    the default is to return the predicted thresholds (ret='preds')'''
+    the default is to return the predicted thresholds (ret='preds')
+    '''
 
     print(g.name)
 
@@ -190,6 +191,9 @@ def model_threshold(g, err_func, thresh_func, params, ret='preds', predtype='lin
     assert(np.all(g.BaselineThresh==g.BaselineThresh.iloc[0])) # has to be true since we will compute un-normalized threshelev (=C%)
     BaselineThresh = g.BaselineThresh.iloc[0]
 
+    # The following code allows both presentation conditions to be modeled simultaneously
+    # if they are both included in one group (g)
+    # If not, i.e. Presentation is among the grouping variables, it still works as usual
     conditions = g.groupby(['Presentation'])
     # set up empty ndarrays to hold the arguments that will be passed to the model
     thresh_this, thresh_other, mask_this, mask_other = np.empty(0), np.empty(0), np.empty(0), np.empty(0)
@@ -200,7 +204,6 @@ def model_threshold(g, err_func, thresh_func, params, ret='preds', predtype='lin
         # collect the masks and thresholds, put them in the right order (which depends on Presentation) to pass to the model
         masks = pres_g.RelMaskContrast
         threshs = pres_g.ThreshElev
-
         if Presentation=='nDicho':
             tt, to, mt, mo = (threshs.as_matrix(), np.zeros_like(threshs), np.zeros_like(masks), masks.as_matrix())
         elif Presentation=='nMono':
@@ -228,3 +231,43 @@ def model_threshold(g, err_func, thresh_func, params, ret='preds', predtype='lin
         except NameError:
             pass
         return retvars
+
+def test_all_bins(ttg_allbin, gvars_pair, test_func, **kwargs):
+    '''
+    Accepts data grouped by (Task, Orientation, Presentation, Population)
+    then feeds each bin within this to test_one_bin().
+    '''
+    g_bin = ttg_allbin.groupby(gvars_pair).apply(test_one_bin, test_func, **kwargs).reset_index()
+    print(g_bin)
+    minp_bin = g_bin.BinNumber.iat[g_bin.pvalue.idxmin()]
+    print('Bin ', minp_bin, 'has lowest p-value.\n')
+    return pd.Series(minp_bin, ['BinNumberToPred'])
+
+def test_one_bin(ttg, test_func, **kwargs):
+    '''
+    Accepts data grouped by (Task, Orientation, Presentation, Population, BinNumber)
+    and does the specified t-test (should be like ttest_ind or ttest_rel from scipy.stats)
+    on the ThreshElev values in the bin.
+    Specifically, tests where NDE and DE are most different
+    '''
+    nde = ttg[ttg['Eye']=='Nde']['ThreshElev'].values
+    de = ttg[ttg['Eye']=='De']['ThreshElev'].values
+    print(ttg.name, ttg.BinCenterRelMaskContrast.iat[0], nde, de, sep='\n')
+    if (len(nde) >0 and len(de) >0):
+        tt_res = test_func(nde, de, **kwargs)
+        if tt_res:
+            return pd.Series(tt_res[1], ['pvalue'])
+    else:
+        print('A group with no obs, skipping')
+
+def add_pred_col(g):
+    '''
+    Add a column with the numeric value we want the model to be evaluated/generate predictions at
+    '''
+    assert(np.all(g.BinNumberToPred==g.BinNumberToPred.iat[0]))
+    RelMCToPredGroup = g[g.BinNumber==g.BinNumberToPred.iat[0]]
+    assert(np.all(RelMCToPredGroup.BinCenterRelMaskContrast==RelMCToPredGroup.BinCenterRelMaskContrast.iat[0]))
+    RelMCToPred = RelMCToPredGroup.BinCenterRelMaskContrast.iat[0]
+    print(RelMCToPred, len(g))
+    g['RelMCToPred'] = RelMCToPred
+    return g
