@@ -271,3 +271,33 @@ def add_pred_col(g):
     print(RelMCToPred, len(g))
     g['RelMCToPred'] = RelMCToPred
     return g
+
+def find_xvalue_to_predict(df, gvars, **kwargs):
+    '''
+    A function that wraps the operation of:
+    Taking a data frame and a set of grouping variables,
+    Groups the data frame in this way and performs a test on bins within the data
+    The binning is provided by the BinNumber column which must be present (and was in the original data)
+    '''
+
+    import scipy.stats as st
+
+    gvars_pair = gvars + ['BinNumber']
+    test_groups = df.groupby(gvars)
+    binpred = test_groups.apply(test_all_bins, gvars_pair, st.ttest_ind).reset_index()
+    print(binpred.columns)
+    # After this line we have a column called BinNumberToPred at the end of the df
+    df = pd.merge(df, binpred, on=gvars)
+
+    print(df.columns)
+
+    # Now group the data separately by Eye, since NDE/DE have different RelMaskContrasts
+    # at the center of their respective bins-at-which-to-predict
+    condition_groups = df.groupby(gvars + ['Eye'])
+    # make sure all conditions have the same bin number to predict within them
+    assert(np.all(condition_groups.apply(
+        lambda g: np.all(g.BinNumberToPred==g.BinNumberToPred.iat[0])
+    ).reset_index()))
+    # Add a column with the actual numerical value at the center of the bin for each Eye
+    df_to_model = condition_groups.apply(add_pred_col)
+    return df_to_model
