@@ -40,6 +40,8 @@ def fit_plot(x, y, **kwargs):
     fmt_pred = kwargs.pop("fmt_pred")
     ses = data[kwargs.pop("yerr")].values # SE's of actually observed threshold elevations
     predY = data[kwargs.pop("Ycol")].values
+    relMCToPred = data['RelMCToPred'].values
+    assert(np.all(relMCToPred==relMCToPred[0])) # check all the same
 
     # control the plotting
     ax = plt.gca()
@@ -54,6 +56,7 @@ def fit_plot(x, y, **kwargs):
     ax.errorbar(data=data, x=x, y=y, yerr=ses,fmt=fmt_obs, **kwargs)
     ax.errorbar(data=data, x=x, y=predY,fmt=fmt_pred, **kwargs)
     ax.axhline(y=1,ls='dotted')
+    ax.axvline(x=relMCToPred[0], ls='dotted')
 
 def gaba_plot(x, y, **kwargs):
     # set up the data frame for plotting, get kwargs etc
@@ -124,7 +127,7 @@ def gaba_vs_psychophys_plot_4line(gv, gr):
 def group_facet_plots(df, plot_func, ofn, grouping_vars, row, col, x, y, col_wrap=None, hue=None, legend=True, **kwargs):
     with PdfPages(ofn) as pdf:
         grouped = df.groupby(grouping_vars)
-        for gv, gr in grouped:
+        for gv, gr in grouped: # each page
             g = sns.FacetGrid(gr, row=row, col=col, hue=hue, col_wrap=col_wrap, size=6, aspect=1.5, sharex=False, sharey=False, margin_titles=True)
             g = g.map_dataframe(plot_func,x,y,**kwargs)
             print('Plotting %s'%'.'.join(gv))
@@ -139,89 +142,3 @@ def group_facet_plots(df, plot_func, ofn, grouping_vars, row, col, x, y, col_wra
             plt.close(g.fig)
     print('Plots saved at',ofn)
     plt.close('all')
-
-## functions that run the model and get predictions, model-agnostic
-def predict_thresh(func, init_guess, C_other, X_this, X_other, fitted_params):
-    '''A wrapper function that accepts a threshold-error minimizing function with arguments in a convenient order'''
-    thresh_params = lf.Parameters()
-    thresh_params.add(name='C_thiseye', value=init_guess, vary=True)
-    thresh_fit = lf.minimize(func, thresh_params, args=(C_other, X_this, X_other, fitted_params))
-    return thresh_fit.params['C_thiseye'].value
-
-def model_condition(g, err_func, thresh_func, params, ret='preds', predtype='linear', supp_only=False, log=False):
-    '''Model a condition. In this case, this function is to be applied to each group, where a group is a particular:
-    - Task (OS/SS)
-    - Mask Orientation (Iso/Cross)
-    - Presentation (nMono/nDicho)
-    - Eye (which viewed the target, De/Nde)
-    - Population (Con/Amb)
-
-    The values that are then modeled are RelMaskContrast (x) vs ThreshElev (y)
-
-    if ret='weights', returns the weights (and any other fitted parameters) for this group.
-    the default is to return the predicted thresholds (ret='preds')'''
-
-    print(g.name, g.RelMCToPred.iat[0])
-
-    masks = g.RelMaskContrast
-    if log:
-        threshs = g.logThreshElev
-    else:
-        threshs = g.ThreshElev
-    thresh_preds = np.empty_like(threshs)
-    thresh_preds[:] = np.nan
-    if supp_only: #remove the facilitation part of the data, and points before it
-        fac_idxs = np.where(threshs <= 1)[0]
-        if fac_idxs.size==0:
-            last_fac_idx = -1
-        else:
-            last_fac_idx = fac_idxs[-1]
-        threshs = threshs[last_fac_idx+1:]
-        masks = masks[last_fac_idx+1:]
-        if len(masks) <= 1: # there is only one data point after the facilitation regime, so we can't estimate a slope
-            if ret=='preds':
-                g['ThreshPred'] = thresh_preds # should be nan's
-                return g
-            else:
-                return None
-
-    assert(np.all(g.Eye==g.Eye.iloc[0])) # Make sure we only are looking at data for one eye
-    Eye = g.Eye.iloc[0]
-    assert(np.all(g.Presentation==g.Presentation.iloc[0])) # again, one condition only
-    Presentation = g.Presentation.iloc[0]
-    assert(np.all(g.BaselineThresh==g.BaselineThresh.iloc[0])) # has to be true since we will compute un-normalized threshelev (=C%)
-    BaselineThresh = g.BaselineThresh.iloc[0]
-
-    if Presentation=='nDicho':
-        contrasts = (threshs.as_matrix(), np.zeros_like(threshs), np.zeros_like(masks), masks.as_matrix())
-    elif Presentation=='nMono':
-        contrasts = (threshs.as_matrix(), np.zeros_like(threshs), masks.as_matrix(), np.zeros_like(masks))
-
-    params_fit = lf.minimize(err_func, params, args=contrasts)
-    pfit = params_fit.params
-    pfit.pretty_print()
-    #params = fmin(err_func, np.zeros(n_free), args=contrasts) #fitted weights of free parameters of the model, as implemented by err_func
-    #print(*zip(free_params,params))
-    #if predtype=='linear':
-    #   pv = pfit.valuesdict()
-    #   threshpred = [pv['y_int'] + relmc*pv['slope'] for relmc in masks]
-    #   ThreshPredBinCenter = pv['y_int'] + g.RelMCToPred.iat[0]*pv['slope']
-    #   ThreshPredBinCenterUnnorm = ThreshPredBinCenter * BaselineThresh
-    #else:
-    threshpred = [predict_thresh(thresh_func, a,[b],[c],[d],pfit) for a,b,c,d in zip(*contrasts)]
-    if ret=='preds':
-        if supp_only:
-            thresh_preds[last_fac_idx+1:] = threshpred
-        else:
-            thresh_preds = threshpred
-        g['ThreshPred'] = thresh_preds
-        return g
-    elif ret=='weights':
-        retvars = pd.Series(pfit.valuesdict(), index=params.keys())
-        try:
-            if ThreshPredBinCenter: # This is set if we use the linear model. TODO clean up
-                retvars['ThreshPredCritical'] = ThreshPredBinCenter
-                retvars['ThreshPredCriticalUnnorm'] = ThreshPredBinCenterUnnorm
-        except NameError:
-            pass
-        return retvars
