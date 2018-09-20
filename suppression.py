@@ -10,8 +10,6 @@ from matplotlib.backends.backend_pdf import PdfPages
 import matplotlib.ticker as tick
 import seaborn as sns
 
-import scipy.optimize as so
-import lmfit as lf
 import itertools as it
 
 ## Plotting functions
@@ -33,7 +31,7 @@ def scaterror_plot(x, y, **kwargs):
     plt.errorbar(data=data, x=x, y=y, yerr=ses, fmt='--o', **kwargs)
     plt.axhline(y=1, ls='dotted', color='gray')
 
-def fit_plot(x, y, **kwargs):
+def subject_fit_plot(x, y, **kwargs):
     # set up the data frame for plotting, get kwargs etc
     data = kwargs.pop("data")
     fmt_obs = kwargs.pop("fmt_obs")
@@ -47,8 +45,8 @@ def fit_plot(x, y, **kwargs):
     ax = plt.gca()
     ax.set_xscale('log')
     ax.set_yscale('log')
-    #ax.get_xaxis().set_major_locator(tick.LogLocator(subs=[1, 3]))
-    #ax.get_yaxis().set_major_locator(tick.LogLocator(subs=[1, 3]))
+    ax.get_xaxis().set_major_locator(tick.LogLocator())
+    ax.get_yaxis().set_major_locator(tick.LogLocator())
     #ax.get_xaxis().set_major_formatter(tick.ScalarFormatter())
     #ax.get_yaxis().set_major_formatter(tick.ScalarFormatter())
     #ax.set_ylim([0.5, np.max([np.max(data[y])+1])])
@@ -57,6 +55,34 @@ def fit_plot(x, y, **kwargs):
     ax.errorbar(data=data, x=x, y=predY,fmt=fmt_pred, **kwargs)
     ax.axhline(y=1,ls='dotted')
     ax.axvline(x=relMCToPred[0], ls='dotted')
+
+def population_fit_plot(x, y, **kwargs):
+    # set up the data frame for plotting, get kwargs etc
+    data = kwargs.pop("data")
+    fmt_obs = kwargs.pop("fmt_obs")
+    fmt_pred = kwargs.pop("fmt_pred")
+    yerr = kwargs.pop("yerr")
+    ycol = kwargs.pop("Ycol")
+
+    ax = plt.gca()
+    ax.set_xscale('log')
+    ax.set_yscale('log')
+    ax.get_xaxis().set_major_locator(tick.LogLocator())
+    ax.get_yaxis().set_major_locator(tick.LogLocator())
+
+    pop_colors = {'Control':'C0', 'Amblyope':'C1'}
+
+    for gvpop, gpop in data.groupby(["Population"]):
+        relMCToPred = gpop['RelMCToPred'].values
+        ax.axvline(x=relMCToPred[0], ls='dotted', color=pop_colors[gvpop])
+        for gv, g in gpop.groupby(["Subject"]):
+            ses = g[yerr].values # SE's of actually observed threshold elevations
+            predY = g[ycol].values
+            assert(np.all(relMCToPred==relMCToPred[0])) # check all the same
+            
+            ax.errorbar(data=g, x=x, y=y, yerr=ses,fmt=fmt_obs, **kwargs)
+            ax.errorbar(data=g, x=x, y=predY,fmt=fmt_pred, **kwargs)
+            ax.axhline(y=1,ls='dotted')
 
 def gaba_plot(x, y, **kwargs):
     # set up the data frame for plotting, get kwargs etc
@@ -74,8 +100,12 @@ def gaba_vs_psychophys_plot_2line(gv, gr):
     x_lbl = "GABA (relative to creatine)"
     yvar = "value"
     y_lbl = {'BaselineThresh':'Baseline Threshold (C%)',
+            'RelMCToPred':'Relative Mask Contrast to predict threshold at',
             'ThreshPredCritical':'Predicted threshold elevation (multiples of baseline)',
-            'ThreshPredCriticalUnnorm':'Predicted threshold elevation (C%)'}
+            'DepthOfSuppression':'Depth of suppression (negative indicates facilitation)',
+            'ThreshPredCriticalUnnorm':'Predicted threshold elevation (C%)',
+            'slope':'Slope of perceptual suppression fit line',
+            'y_int':'y-intercept of perceptual suppression fit line'}
     g = sns.lmplot(data=gr, 
               row='Presentation',col='Population',# facet rows and columns
               x=xvar, y=yvar,hue="Eye",sharey=False, markers=["o","x"])
@@ -93,8 +123,12 @@ def gaba_vs_psychophys_plot_2line_2eye(gv, gr, **kwargs):
     x_lbl = "GABA (relative to creatine)"
     yvar = "Nde-De"
     y_lbl = {'BaselineThresh':'Interocular Difference in Baseline Threshold (NDE-DE, C%)',
+            'RelMCToPred':'Relative Mask Contrast to predict threshold at',
             'ThreshPredCritical':'Interocular difference in predicted threshold elevation (NDE-DE, multiples of baseline)',
-            'ThreshPredCriticalUnnorm':'Interocular difference in predicted threshold elevation (NDE-DE, C%)'}
+            'DepthOfSuppression':'Interocular difference in Depth of suppression',
+            'ThreshPredCriticalUnnorm':'Interocular difference in predicted threshold elevation (NDE-DE, C%)',
+            'slope':'Interocular difference in slope of perceptual suppression fit line',
+            'y_int':'Interocular difference in y-intercept of perceptual suppression fit line'}
     g = sns.lmplot(data=gr, 
                   col='Presentation',hue='Population',# facet rows and columns
                   x=xvar, y=yvar,sharey=False, **kwargs)

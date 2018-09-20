@@ -225,19 +225,21 @@ def model_threshold(g, err_func, thresh_func, params, ret='preds'):
     elif ret=='weights':
         retvars = pd.Series(pfit.valuesdict(), index=params.keys())
         try:
-            if ThreshPredBinCenter: # This is set if we use the linear model. TODO clean up
+            if 'RelMCToPred' in g.columns: # We are given a RelMaskContrast we want to evaluate our model at
                 retvars['ThreshPredCritical'] = ThreshPredBinCenter
                 retvars['ThreshPredCriticalUnnorm'] = ThreshPredBinCenterUnnorm
         except NameError:
             pass
         return retvars
 
-def test_all_bins(ttg_allbin, gvars_pair, test_func, **kwargs):
+def test_all_bins(test_group, gvars_pair, test_func, **kwargs):
     '''
     Accepts data grouped by (Task, Orientation, Presentation, Population)
     then feeds each bin within this to test_one_bin().
     '''
-    g_bin = ttg_allbin.groupby(gvars_pair).apply(test_one_bin, test_func, **kwargs).reset_index()
+    ttg_pairbin = test_group.groupby(gvars_pair)
+    print(f"There are {len(ttg_pairbin)} bins in this condition.")
+    g_bin = ttg_pairbin.apply(test_one_bin, test_func, **kwargs).reset_index()
     print(g_bin)
     minp_bin = g_bin.BinNumber.iat[g_bin.pvalue.idxmin()]
     print('Bin ', minp_bin, 'has lowest p-value.\n')
@@ -252,7 +254,9 @@ def test_one_bin(ttg, test_func, **kwargs):
     '''
     nde = ttg[ttg['Eye']=='Nde']['ThreshElev'].values
     de = ttg[ttg['Eye']=='De']['ThreshElev'].values
-    print(ttg.name, ttg.BinCenterRelMaskContrast.iat[0], nde, de, sep='\n')
+    print(f"{ttg.name}, Bin Center at RelMaskContrast={ttg.BinCenterRelMaskContrast.iat[0]}",
+        f"{nde} <= NDE ThreshElevs, n={len(nde)}",
+        f"{de} <= DE ThreshElevs, n={len(de)}", sep='\n')
     if (len(nde) >0 and len(de) >0):
         tt_res = test_func(nde, de, **kwargs)
         if tt_res:
@@ -274,17 +278,14 @@ def add_pred_col(g):
 
 def find_xvalue_to_predict(df, gvars, **kwargs):
     '''
-    A function that wraps the operation of:
-    Taking a data frame and a set of grouping variables,
-    Groups the data frame in this way and performs a test on bins within the data
+    A function that wraps this operation:
+    Take a data frame and a set of grouping variables,
+    Group the data frame in this way and perform a test on bins within the data
     The binning is provided by the BinNumber column which must be present (and was in the original data)
     '''
-
-    import scipy.stats as st
-
     gvars_pair = gvars + ['BinNumber']
     test_groups = df.groupby(gvars)
-    binpred = test_groups.apply(test_all_bins, gvars_pair, st.ttest_ind).reset_index()
+    binpred = test_groups.apply(test_all_bins, gvars_pair, **kwargs).reset_index()
     print(binpred.columns)
     # After this line we have a column called BinNumberToPred at the end of the df
     df = pd.merge(df, binpred, on=gvars)
