@@ -102,7 +102,7 @@ def gaba_vs_psychophys_plot_2line(gv, gr):
     y_lbl = {'BaselineThresh':'Baseline Threshold (C%)',
             'RelMCToPred':'Relative Mask Contrast to predict threshold at',
             'ThreshPredCritical':'Predicted threshold elevation (multiples of baseline)',
-            'DepthOfSuppression':'Depth of suppression (negative indicates facilitation)',
+            'DepthOfSuppression':'Depth of suppression (multiples of baseline threshold)\nnegative indicates facilitation',
             'ThreshPredCriticalUnnorm':'Predicted threshold elevation (C%)',
             'slope':'Slope of perceptual suppression fit line',
             'y_int':'y-intercept of perceptual suppression fit line'}
