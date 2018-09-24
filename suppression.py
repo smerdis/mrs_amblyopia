@@ -102,19 +102,39 @@ def gaba_vs_psychophys_plot_2line(gv, gr):
     y_lbl = {'BaselineThresh':'Baseline Threshold (C%)',
             'RelMCToPred':'Relative Mask Contrast to predict threshold at',
             'ThreshPredCritical':'Predicted threshold elevation (multiples of baseline)',
-            'DepthOfSuppression':'Depth of suppression (multiples of baseline threshold)\nnegative indicates facilitation',
+            'DepthOfSuppressionPred':'Depth of suppression (multiples of baseline threshold)\nnegative indicates facilitation',
             'ThreshPredCriticalUnnorm':'Predicted threshold elevation (C%)',
             'slope':'Slope of perceptual suppression fit line',
             'y_int':'y-intercept of perceptual suppression fit line'}
     g = sns.lmplot(data=gr, 
               row='Presentation',col='Population',# facet rows and columns
               x=xvar, y=yvar,hue="Eye",sharey=False, markers=["o","x"])
-    if gv[2]=="ThreshPredCritical":
+    if gv[-1]=="ThreshPredCritical":
         g.set(yscale='log')
         g.set(ylim=[min(gr[yvar])-.1, 1.1*max(gr[yvar])])
     g.fig.suptitle(', '.join(gv), fontsize=16, y=0.97)
     g.fig.subplots_adjust(top=.9, right=.8)
-    g.set_axis_labels(x_lbl, y_lbl[gv[2]])
+    g.set_axis_labels(x_lbl, y_lbl[gv[-1]])
+    plt.close(g.fig)
+    return(g)
+
+def gaba_vs_oss_plot_2line(gv, gr):
+    xvar = "GABA"
+    x_lbl = "GABA (relative to creatine)"
+    yvar = "value"
+    y_lbl = {'BaselineThresh':'Baseline Threshold (C%), Iso/Cross ratio',
+            'RelMCToPred':'Relative Mask Contrast to predict threshold at, Iso/Cross ratio',
+            'ThreshPredCritical':'Predicted threshold elevation (multiples of baseline), Iso/Cross ratio',
+            'DepthOfSuppressionPred':'Depth of suppression (multiples of baseline threshold)\nIso/Cross ratio',
+            'ThreshPredCriticalUnnorm':'Predicted threshold elevation (C%) Iso/Cross ratio',
+            'slope':'Slope of perceptual suppression fit line, Iso/Cross ratio',
+            'y_int':'y-intercept of perceptual suppression fit line, Iso/Cross ratio'}
+    g = sns.lmplot(data=gr, 
+              row='Presentation',col='Population',# facet rows and columns
+              x=xvar, y=yvar,hue="Eye",sharey=False, markers=["o","x"])
+    g.fig.suptitle(', '.join(gv), fontsize=16, y=0.97)
+    g.fig.subplots_adjust(top=.9, right=.8)
+    g.set_axis_labels(x_lbl, y_lbl[gv[-1]])
     plt.close(g.fig)
     return(g)
 
@@ -125,7 +145,7 @@ def gaba_vs_psychophys_plot_2line_2eye(gv, gr, **kwargs):
     y_lbl = {'BaselineThresh':'Interocular Difference in Baseline Threshold (NDE-DE, C%)',
             'RelMCToPred':'Relative Mask Contrast to predict threshold at',
             'ThreshPredCritical':'Interocular difference in predicted threshold elevation (NDE-DE, multiples of baseline)',
-            'DepthOfSuppression':'Interocular difference in Depth of suppression',
+            'DepthOfSuppressionPred':'Interocular difference in predicted depth of suppression\n(in multiples of baseline threshold)',
             'ThreshPredCriticalUnnorm':'Interocular difference in predicted threshold elevation (NDE-DE, C%)',
             'slope':'Interocular difference in slope of perceptual suppression fit line',
             'y_int':'Interocular difference in y-intercept of perceptual suppression fit line'}

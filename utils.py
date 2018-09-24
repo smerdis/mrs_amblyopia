@@ -240,7 +240,7 @@ def test_all_bins(test_group, gvars_pair, test_func, **kwargs):
     ttg_pairbin = test_group.groupby(gvars_pair)
     print(f"There are {len(ttg_pairbin)} bins in this condition.")
     g_bin = ttg_pairbin.apply(test_one_bin, test_func, **kwargs).reset_index()
-    print(g_bin)
+    #print(g_bin)
     minp_bin = g_bin.BinNumber.iat[g_bin.pvalue.idxmin()]
     print('Bin ', minp_bin, 'has lowest p-value.\n')
     return pd.Series(minp_bin, ['BinNumberToPred'])
@@ -254,7 +254,7 @@ def test_one_bin(ttg, test_func, **kwargs):
     '''
     nde = ttg[ttg['Eye']=='Nde']['ThreshElev'].values
     de = ttg[ttg['Eye']=='De']['ThreshElev'].values
-    print(f"{ttg.name}, Bin Center at RelMaskContrast={ttg.BinCenterRelMaskContrast.iat[0]}",
+    print(f"{ttg.name}, Bin Center at RelMaskContrast={ttg.BinCenterRelMaskContrast.iat[0]:.3f}",
         f"{nde} <= NDE ThreshElevs, n={len(nde)}",
         f"{de} <= DE ThreshElevs, n={len(de)}", sep='\n')
     if (len(nde) >0 and len(de) >0):
@@ -271,8 +271,14 @@ def add_pred_col(g):
     assert(np.all(g.BinNumberToPred==g.BinNumberToPred.iat[0]))
     RelMCToPredGroup = g[g.BinNumber==g.BinNumberToPred.iat[0]]
     assert(np.all(RelMCToPredGroup.BinCenterRelMaskContrast==RelMCToPredGroup.BinCenterRelMaskContrast.iat[0]))
+    print(RelMCToPredGroup.head()[['Subject','Eye','BinNumber','BinNumberToPred','ThreshElev']])
     RelMCToPred = RelMCToPredGroup.BinCenterRelMaskContrast.iat[0]
-    print(RelMCToPred, len(g))
+    #ObservedThreshElevCriticalBin = RelMCToPredGroup.ThreshElev
+    #for gv2, g2 in g.groupby(['Subject', 'Eye']):
+    #    print(gv2, g2[['BinNumber','BinNumberToPred']])
+    #    assert(np.any(g2['BinNumber']==g2['BinNumberToPred']))
+    #print(ObservedThreshElevCriticalBin, len(ObservedThreshElevCriticalBin))
+    #print(RelMCToPred, len(g))
     g['RelMCToPred'] = RelMCToPred
     return g
 
