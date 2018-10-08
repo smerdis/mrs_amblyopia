@@ -8,6 +8,9 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 import matplotlib.ticker as tick
+import matplotlib.image as mpimg
+from matplotlib.offsetbox import (OffsetImage,
+                                  AnnotationBbox)
 import seaborn as sns
 
 import itertools as it
@@ -109,9 +112,6 @@ def gaba_vs_psychophys_plot_2line(gv, gr):
     g = sns.lmplot(data=gr, 
               row='Presentation',col='Population',# facet rows and columns
               x=xvar, y=yvar,hue="Eye",sharey=False, markers=["o","x"])
-    if gv[-1]=="ThreshPredCritical":
-        g.set(yscale='log')
-        g.set(ylim=[min(gr[yvar])-.1, 1.1*max(gr[yvar])])
     g.fig.suptitle(', '.join(gv), fontsize=16, y=0.97)
     g.fig.subplots_adjust(top=.9, right=.8)
     g.set_axis_labels(x_lbl, y_lbl[gv[-1]])
@@ -152,12 +152,32 @@ def gaba_vs_psychophys_plot_2line_2eye(gv, gr, **kwargs):
     g = sns.lmplot(data=gr, 
                   col='Presentation',hue='Population',# facet rows and columns
                   x=xvar, y=yvar,sharey=False, **kwargs)
-    #if gv[2]=="ThreshPredCritical":
-    #   g.set(yscale='log')
-        #g.set(ylim=[min(gr[yvar])-.1, 1.1*max(gr[yvar])])
+    #ax1, ax2 = g.axes[0]
+    
+    #ax1.axhline(y=2)
+    #ax2.axhline(y=3)
+    #ax3, ax4 = g.axes[1]
+    #ax3.axhline(y=2.25)
+    #ax4.axhline(y=2.5)
     g.fig.suptitle(':'.join(gv), fontsize=16, y=0.97)
     g.fig.subplots_adjust(top=.9, right=.8)
     g.set_axis_labels(x_lbl, y_lbl[gv[-1]])
+
+    # xy = [0.3, 0.55]
+    # fn = f"/Users/smerdis/code/MRS_amblyopia/eye-presentation_iso_dicho_de.png"
+    # #legend_fns = [f"../eye-presentation_iso_dicho_de.png"]
+    # #for fn in legend_fns:
+    # arr_img = plt.imread(fn, format='png')
+    # imagebox = OffsetImage(arr_img)
+    # imagebox.image.axes = ax1
+    # ab = AnnotationBbox(imagebox, xy,
+    #                 xybox=(120., -80.),
+    #                 xycoords='data',
+    #                 boxcoords="offset points",
+    #                 pad=0.5)
+    # ax1.add_artist(ab)
+
+
     plt.close(g.fig)
     return(g)
 
