@@ -15,6 +15,7 @@ def db_to_pct(db):
 def load_psychophys(pp_fn):
     df = pd.read_table(pp_fn)
     df['logThreshElev'] = np.log10(df['ThreshElev'])
+    df['logRelMaskContrast'] = np.log10(df['RelMaskContrast'])
     return df
 
 def load_gaba(gaba_fn):
@@ -119,15 +120,15 @@ def summarize_conditions(df, gvars):
     Condense the data frame from individual trials to statistics of each condition that will be used for modeling.
     """
     grouped = df.groupby(gvars)
-
     # For each combination of the above, how many trials (n), how many correct (c), and what's the percentage?
     condensed_df = grouped['ResponseAccuracy'].agg([len, np.count_nonzero]).rename(columns={'len':'n', 'count_nonzero':'c'})
     condensed_df['pct_correct'] = condensed_df['c']/condensed_df['n']
-
     return grouped, condensed_df
 
 def predict_thresh(func, init_guess, C_other, X_this, X_other, fitted_params):
-    '''A wrapper function that accepts a threshold-error minimizing function with arguments in a convenient order'''
+    """
+    A wrapper function that accepts a threshold-error minimizing function with arguments in a convenient order
+    """
     #print(init_guess, np.any(np.isnan(fitted_params)))
     thresh_params = lf.Parameters()
     thresh_params.add(name='C_thiseye', value=init_guess, min=0.0, vary=True)
@@ -170,7 +171,7 @@ def model_trials(g, err_func, params):
     return pd.Series(pfit.valuesdict(), index=params.keys())
 
 def model_threshold(g, err_func, thresh_func, params, ret='preds'):
-    '''
+    """
     Model a condition. This function is to be applied to each group, where a group is a particular:
     - Task (OS/SS)
     - Eye (which viewed the target, De/Nde)
@@ -181,7 +182,7 @@ def model_threshold(g, err_func, thresh_func, params, ret='preds'):
 
     if ret='weights', returns the weights (and any other fitted parameters) for this group.
     the default is to return the predicted thresholds (ret='preds')
-    '''
+    """
 
     print(g.name)
 
@@ -232,47 +233,51 @@ def model_threshold(g, err_func, thresh_func, params, ret='preds'):
             pass
         return retvars
 
-def test_all_bins(test_group, gvars_pair, test_func, **kwargs):
-    '''
+def test_all_bins(test_group, gvars_pair, bin_col, y_col, test_func, **kwargs):
+    """
     Accepts data grouped by (Task, Orientation, Presentation, Population)
     then feeds each bin within this to test_one_bin().
-    '''
+    """
     ttg_pairbin = test_group.groupby(gvars_pair)
     print(f"There are {len(ttg_pairbin)} bins in this condition.")
-    g_bin = ttg_pairbin.apply(test_one_bin, test_func, **kwargs).reset_index()
-    #print(g_bin)
-    minp_bin = g_bin.BinNumber.iat[g_bin.pvalue.idxmin()]
-    print('Bin ', minp_bin, 'has lowest p-value.\n')
+    g_bin = ttg_pairbin.apply(test_one_bin, y_col, test_func, **kwargs).reset_index()
+    minp_bin = g_bin[bin_col].iat[g_bin.pvalue.idxmin()]
+    print(f"{bin_col} {minp_bin} has lowest p-value.\n")
     return pd.Series(minp_bin, ['BinNumberToPred'])
 
-def test_one_bin(ttg, test_func, **kwargs):
-    '''
+def test_one_bin(ttg, y_col, test_func, **kwargs):
+    """
     Accepts data grouped by (Task, Orientation, Presentation, Population, BinNumber)
     and does the specified t-test (should be like ttest_ind or ttest_rel from scipy.stats)
     on the ThreshElev values in the bin.
     Specifically, tests where NDE and DE are most different
-    '''
-    nde = ttg[ttg['Eye']=='Nde']['ThreshElev'].values
-    de = ttg[ttg['Eye']=='De']['ThreshElev'].values
-    print(f"{ttg.name}, Bin Center at RelMaskContrast={ttg.BinCenterRelMaskContrast.iat[0]:.3f}",
-        f"{nde} <= NDE ThreshElevs, n={len(nde)}",
-        f"{de} <= DE ThreshElevs, n={len(de)}", sep='\n')
-    if (len(nde) >0 and len(de) >0):
-        tt_res = test_func(nde, de, **kwargs)
-        if tt_res:
-            return pd.Series(tt_res[1], ['pvalue'])
+    """
+    nde = ttg[ttg['Eye']=='Nde'][y_col].values
+    de = ttg[ttg['Eye']=='De'][y_col].values
+    # print(f"{ttg.name}",
+    #     f"{nde} <= NDE, n={len(nde)}",
+    #     f"{de} <= DE, n={len(de)}", sep='\n')
+    if (len(nde) >0 and len(de) >0): # we have observations for both eyes
+        if (np.mean(nde) > 1) or (np.mean(de) > 1):
+            tt_res = test_func(nde, de, **kwargs)
+            if tt_res:
+                print(f"{len(de)} DE obs, {len(nde)} NDE obs\np-value: {tt_res[1]:.10f}")
+                return pd.Series(tt_res[1], ['pvalue'])
+        else:
+            print('Not in suppression, mean of both eyes is < 1.')
     else:
         print('A group with no obs, skipping')
 
-def add_pred_col(g):
+
+def add_pred_col(g, bin_col, y_col):
     '''
     Add a column with the numeric value we want the model to be evaluated/generate predictions at
     '''
     assert(np.all(g.BinNumberToPred==g.BinNumberToPred.iat[0]))
-    RelMCToPredGroup = g[g.BinNumber==g.BinNumberToPred.iat[0]]
-    assert(np.all(RelMCToPredGroup.BinCenterRelMaskContrast==RelMCToPredGroup.BinCenterRelMaskContrast.iat[0]))
-    print(RelMCToPredGroup.head()[['Subject','Eye','BinNumber','BinNumberToPred','ThreshElev']])
-    RelMCToPred = RelMCToPredGroup.BinCenterRelMaskContrast.iat[0]
+    RelMCToPredGroup = g[g[bin_col]==g.BinNumberToPred.iat[0]]
+    print(RelMCToPredGroup.head())
+    #print(RelMCToPredGroup.head()[['Subject','Eye',bin_col,'BinNumberToPred',y_col]])
+    RelMCToPred = RelMCToPredGroup.BinNumberToPred.iat[0].astype(int)
     #ObservedThreshElevCriticalBin = RelMCToPredGroup.ThreshElev
     #for gv2, g2 in g.groupby(['Subject', 'Eye']):
     #    print(gv2, g2[['BinNumber','BinNumberToPred']])
@@ -282,21 +287,23 @@ def add_pred_col(g):
     g['RelMCToPred'] = RelMCToPred
     return g
 
-def find_xvalue_to_predict(df, gvars, **kwargs):
+def find_pct_to_predict(df, gvars, bin_col, y_col, **kwargs):
     '''
     A function that wraps this operation:
     Take a data frame and a set of grouping variables,
     Group the data frame in this way and perform a test on bins within the data
     The binning is provided by the BinNumber column which must be present (and was in the original data)
     '''
-    gvars_pair = gvars + ['BinNumber']
+    gvars_pair = gvars + [bin_col]
     test_groups = df.groupby(gvars)
-    binpred = test_groups.apply(test_all_bins, gvars_pair, **kwargs).reset_index()
-    print(binpred.columns)
+    binpred = test_groups.apply(test_all_bins, gvars_pair, bin_col, y_col, **kwargs).reset_index()
+    #print("binpred cols: ", binpred.columns)
+    print("Any NaNs in BinNumberToPred?", np.any(np.isnan(binpred.BinNumberToPred)))
     # After this line we have a column called BinNumberToPred at the end of the df
     df = pd.merge(df, binpred, on=gvars)
 
-    print(df.columns)
+    #print(df.columns)
+    #print(df.head())
 
     # Now group the data separately by Eye, since NDE/DE have different RelMaskContrasts
     # at the center of their respective bins-at-which-to-predict
@@ -306,5 +313,5 @@ def find_xvalue_to_predict(df, gvars, **kwargs):
         lambda g: np.all(g.BinNumberToPred==g.BinNumberToPred.iat[0])
     ).reset_index()))
     # Add a column with the actual numerical value at the center of the bin for each Eye
-    df_to_model = condition_groups.apply(add_pred_col)
+    df_to_model = condition_groups.apply(add_pred_col, bin_col, y_col)
     return df_to_model
