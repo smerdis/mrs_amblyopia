@@ -145,7 +145,7 @@ def population_fit_plot_pct(x, y, **kwargs):
             ax.errorbar(data=g, x=x, y=y,fmt=fmt_obs, **kwargs)
             ax.axhline(y=1,ls='dotted')
 
-def gaba_vs_psychophys_plot_2line(gv, gr):
+def gaba_vs_psychophys_plot_2line(gv, gr, **kwargs):
     xvar = "GABA"
     x_lbl = "GABA (relative to creatine)"
     yvar = "value"
@@ -156,11 +156,11 @@ def gaba_vs_psychophys_plot_2line(gv, gr):
             'ThreshPredCriticalUnnorm':'Predicted threshold elevation (C%)',
             'slope':'Slope of perceptual suppression fit line',
             'y_int':'y-intercept of perceptual suppression fit line'}
-    sns.set_palette('Set2')
-    g = sns.lmplot(data=gr, 
-              row='Presentation',col='Population',# facet rows and columns
-              x=xvar, y=yvar,hue="Eye",sharey=True, markers=["o","x"])
-    g.fig.suptitle(', '.join(gv), fontsize=16, y=0.97)
+    g = sns.lmplot(data=gr, row='Orientation',
+              col='Presentation', # facet rows and columns
+              x=xvar, y=yvar, hue='Eye', sharey=True, markers=["o","x"], **kwargs)
+    g.set(xlim=[.18, .23])
+    #g.fig.suptitle(', '.join(gv), fontsize=16, y=0.97)
     g.fig.subplots_adjust(top=.9, right=.8)
     g.set_axis_labels(x_lbl, y_lbl[gv[-1]])
     plt.close(g.fig)
@@ -170,7 +170,7 @@ def gaba_vs_psychophys_plot_2line_nofacet(gv, gr, **kwargs):
     xvar = "GABA"
     yvar = "value"
     g = sns.lmplot(data=gr, 
-              x=xvar, y=yvar,hue="Eye", sharey=True, markers=["o","x"], legend=False, **kwargs)
+              x=xvar, y=yvar,hue="Eye", sharey=True, markers=["x","o"], **kwargs)
     g.set_axis_labels('', '')
     #g.set_xticklabels([])
     #g.set_yticklabels([])
@@ -219,6 +219,19 @@ def gaba_vs_psychophys_plot_2line_2eye(gv, gr, **kwargs):
     plt.close(g.fig)
     return(g)
 
+def oss_plot_2eye(gv, gr, **kwargs):
+    xvar = "GABA"
+    x_lbl = "GABA (relative to creatine)"
+    yvar = "value"
+    g = sns.lmplot(data=gr, 
+                  col='Presentation',hue='Population',# facet rows and columns
+                  x=xvar, y=yvar,sharey=True, **kwargs)
+    g.fig.suptitle(':'.join(gv), fontsize=16, y=0.97)
+    g.fig.subplots_adjust(top=.9, right=.8)
+    g.set_axis_labels(x_lbl, "Mean Iso/Cross OSS ratio across both eyes")
+    plt.close(g.fig)
+    return(g)
+
 def gaba_vs_psychophys_plot_2line_2eye_nofacet(gv, gr, **kwargs):
     xvar = "GABA"
     yvar = "Nde-De"
@@ -256,7 +269,7 @@ def group_facet_plots(df, plot_func, ofn, grouping_vars, row, col, x, y, col_wra
     with PdfPages(ofn) as pdf:
         grouped = df.groupby(grouping_vars)
         for gv, gr in grouped: # each page
-            g = sns.FacetGrid(gr, row=row, col=col, hue=hue, col_wrap=col_wrap, size=6, aspect=1.5, sharex=False, sharey=True, margin_titles=True)
+            g = sns.FacetGrid(gr, row=row, col=col, hue=hue, col_wrap=col_wrap, height=6, aspect=1.5, sharex=False, sharey=True, margin_titles=True)
             g = g.map_dataframe(plot_func,x,y,**kwargs)
             print('Plotting %s'%'.'.join(gv))
             if legend:
