@@ -9,10 +9,10 @@
 %% useful variables, condition definitions
 clear all;
 
-data_dir = '~/silver/MRS_amblyopia/analysis/gaba' ;
+data_dir = '~/code/MRS_amblyopia/analysis/gaba' ;
 gaba_fn = [data_dir '/MRS_group_summary_n31_110614.mat'] ;
 
-output_fn = 'gaba_data.txt';
+output_fn = 'gaba_data_2019_recheck.txt';
 
 %% Surround suppression task
 load(gaba_fn) ; % should yield 'DAV' and some other (ignored) vars

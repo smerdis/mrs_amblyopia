@@ -13,17 +13,17 @@ def db_to_pct(db):
 
 ## Functions to read input
 def load_psychophys(pp_fn):
-    df = pd.read_table(pp_fn)
+    df = pd.read_csv(pp_fn, sep='\t')
     df['logThreshElev'] = np.log10(df['ThreshElev'])
     df['logRelMaskContrast'] = np.log10(df['RelMaskContrast'])
     return df
 
-def load_gaba(gaba_fn):
-    gdf = pd.read_table(gaba_fn)
-    return gdf[gdf.Presentation=='occ_binoc'] # this is the gaba measure we want to use
+def load_gaba(gaba_fn, pres_cond='occ_binoc'):
+    gdf = pd.read_csv(gaba_fn, sep='\t')
+    return gdf[gdf.Presentation==pres_cond] # this is the gaba measure we want to use
 
 def load_fmri(fmri_fn):
-    return pd.read_table(fmri_fn)
+    return pd.read_csv(fmri_fn, sep='\t')
 
 def predict_thresh(func, init_guess, C_other, X_this, X_other, fitted_params):
     """

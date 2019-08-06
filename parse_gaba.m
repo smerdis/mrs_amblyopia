@@ -6,7 +6,8 @@ function [col_str, output_txt] = parse_gaba(d)
 % d: data structure (i.e. DAV.GABA.raw.ratio_CrOff)
 
 population_conditions = {'Control', 'Amblyope'};
-presentation_conditions = {'occ_binoc', 'occ_none'}; % which conditions (columns of allSub) will be used
+%presentation_conditions = {'occ_binoc', 'occ_none'}; % which conditions (columns of allSub) will be used
+presentation_conditions = {'motor', 'occ_binoc', 'mean_occ_all', 'mean_occ_stim'}; % which conditions (columns of allSub) will be used
 
 % expected column names for the data in each of the above conditions
 expected_lbls = {'motor','occ_binoc','occ_dichop','occ_none','mean_occ_all','mean_occ_stim','normBinoc','normDichop'};
@@ -27,7 +28,7 @@ dat_lbls = d.condOrder;
 assert(isequal(dat_lbls,expected_lbls),'Columns of allSub differ from what was expected!') ;
 assert(length(d.ambGroup)==length(d.allSub_clean), 'ambGroup and allSub have different length!') ;
 
-df = d.allSub ;
+df = d.allSub_clean ;
 [nr, ~] = size(df); % number of rows of data
 for i_r = 1:nr
     subjName = lower(d.subID{i_r}); % initials [unique identifier]
