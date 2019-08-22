@@ -25,16 +25,6 @@ def load_gaba(gaba_fn, pres_cond='occ_binoc'):
 def load_fmri(fmri_fn):
     return pd.read_csv(fmri_fn, sep='\t')
 
-def predict_thresh(func, init_guess, C_other, X_this, X_other, fitted_params):
-    """
-    A wrapper function that accepts a threshold-error minimizing function with arguments in a convenient order
-    """
-    #print(init_guess, np.any(np.isnan(fitted_params)))
-    thresh_params = lf.Parameters()
-    thresh_params.add(name='C_thiseye', value=init_guess, min=0.0, vary=True)
-    thresh_fit = lf.minimize(func, thresh_params, args=(C_other, X_this, X_other, fitted_params))
-    return thresh_fit.params['C_thiseye'].value
-
 def test_all_bins(test_group, gvars_pair, bin_col, y_col, test_func, **kwargs):
     """
     Accepts data grouped by (Task, Orientation, Presentation, Population)
@@ -118,9 +108,19 @@ def find_pct_to_predict(df, gvars, bin_col, y_col, **kwargs):
     df_to_model = condition_groups.apply(add_pred_col, bin_col, y_col)
     return df_to_model
 
-# This function has been superseded by a simpler implementation using statsmodels
-# However, it would still be useful to fit e.g. the two-stage model to the thresholds
-# So I'm preserving it in this commit, though it might be deleted later as cruft.
+# These functions have been superseded by a simpler implementation using statsmodels
+# However, they would still be useful to fit e.g. the two-stage model to the thresholds
+# So I'm preserving them in this commit
+
+# def predict_thresh(func, init_guess, C_other, X_this, X_other, fitted_params):
+#     """
+#     A wrapper function that accepts a threshold-error minimizing function with arguments in a convenient order
+#     """
+#     #print(init_guess, np.any(np.isnan(fitted_params)))
+#     thresh_params = lf.Parameters()
+#     thresh_params.add(name='C_thiseye', value=init_guess, min=0.0, vary=True)
+#     thresh_fit = lf.minimize(func, thresh_params, args=(C_other, X_this, X_other, fitted_params))
+#     return thresh_fit.params['C_thiseye'].value
 
 # def model_threshold(g, err_func, thresh_func, params, ret='preds'):
 #     """
