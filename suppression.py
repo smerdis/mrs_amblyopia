@@ -145,6 +145,47 @@ def population_fit_plot_pct(x, y, **kwargs):
             ax.errorbar(data=g, x=x, y=y,fmt=fmt_obs, **kwargs)
             ax.axhline(y=1,ls='dotted')
 
+def gaba_vs_psychophys_plot(gv, gr, **kwargs):
+    print(gv)
+    xvar = "GABA"
+    yvar = "value"
+    x_lbl = "GABA (relative to creatine)"
+    y_lbl = {'BaselineThresh':'Baseline Threshold (C%)',
+            'RelMCToPred':'Relative Mask Contrast to predict threshold at',
+            'ThreshPredCritical':'Predicted threshold elevation (multiples of baseline)',
+            'DepthOfSuppressionPred':'Depth of suppression (multiples of baseline threshold)\nnegative indicates facilitation',
+            'ThreshPredCriticalUnnorm':'Predicted threshold elevation (C%)',
+            'slope':'Slope of perceptual suppression fit line',
+            'y_int':'y-intercept of perceptual suppression fit line'}
+    g = sns.lmplot(data=gr, x=xvar, y=yvar, **kwargs)
+    g.set(xlim=[.18, .23])
+    g.set_axis_labels(x_lbl, y_lbl[gv[-1]])
+    g.fig.suptitle(', '.join(gv), fontsize=16, y=0.97)
+    
+
+    #plt.legend(labels=["Foo","Bar"], loc="upper left")
+    ax = g.axes
+    ax[0,0].legend(loc="lower right", title="Target eye")
+    ax[0,1].legend(loc="lower right", title="Target eye")
+
+    #g._legend.set_title("Eye which viewed target")
+
+    if 'SS' in gv:
+        if 'Iso' in gv:
+            im = plt.imread(f"/Users/smerdis/Dropbox/Documents/cal/silverlab/mrs-amblyopia/ss-iso-targetandmask.png")
+        elif 'Cross' in gv:
+            im = plt.imread(f"/Users/smerdis/Dropbox/Documents/cal/silverlab/mrs-amblyopia/ss-cross-targetandmask.png")
+        else:
+            print('Unknown orientation...')
+
+    newax = g.fig.add_axes([0.85, 0.85, 0.1, 0.1], anchor='NE')
+    newax.imshow(im)
+    newax.axis('off')
+
+    plt.close(g.fig)
+    return(g)
+
+
 def gaba_vs_psychophys_plot_2line(gv, gr, **kwargs):
     xvar = "GABA"
     x_lbl = "GABA (relative to creatine)"
@@ -160,7 +201,7 @@ def gaba_vs_psychophys_plot_2line(gv, gr, **kwargs):
               col='Presentation', # facet rows and columns
               x=xvar, y=yvar, hue='Eye', sharey=True, markers=["o","x"], **kwargs)
     g.set(xlim=[.18, .23])
-    #g.fig.suptitle(', '.join(gv), fontsize=16, y=0.97)
+    g.fig.suptitle(', '.join(gv), fontsize=16, y=0.97)
     g.fig.subplots_adjust(top=.9, right=.8)
     g.set_axis_labels(x_lbl, y_lbl[gv[-1]])
     plt.close(g.fig)
@@ -175,7 +216,8 @@ def gaba_vs_psychophys_plot_2line_nofacet(gv, gr, **kwargs):
     #g.set_xticklabels([])
     #g.set_yticklabels([])
     #g.ax.set_ylim([-1, 3])
-    g.set_titles(None)
+    #g.set_titles(None)
+    g.fig.suptitle(', '.join(gv), fontsize=16, y=0.97)
     plt.close(g.fig)
     return(g)
 
