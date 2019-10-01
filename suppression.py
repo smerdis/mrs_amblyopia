@@ -145,7 +145,7 @@ def population_fit_plot_pct(x, y, **kwargs):
             ax.errorbar(data=g, x=x, y=y,fmt=fmt_obs, **kwargs)
             ax.axhline(y=1,ls='dotted')
 
-def gaba_vs_psychophys_plot(gv, gr, **kwargs):
+def gaba_vs_psychophys_plot(gv, gr, legend_box = [0.87, 0.55, 0.1, 0.1], **kwargs):
     print(gv)
     xvar = "GABA"
     yvar = "value"
@@ -161,14 +161,13 @@ def gaba_vs_psychophys_plot(gv, gr, **kwargs):
     g.set(xlim=[.18, .23])
     g.set_axis_labels(x_lbl, y_lbl[gv[-1]])
     g.fig.suptitle(', '.join(gv), fontsize=16, y=0.97)
-    
 
-    #plt.legend(labels=["Foo","Bar"], loc="upper left")
-    ax = g.axes
-    ax[0,0].legend(loc="lower right", title="Target eye")
-    ax[0,1].legend(loc="lower right", title="Target eye")
+    #print(g.fig.get_figwidth())
 
-    #g._legend.set_title("Eye which viewed target")
+    if g._legend:
+        g._legend.set_title(f"Eye which\nviewed target")
+        #bbox = g._legend.get_bbox_to_anchor()
+        #print(bbox)
 
     if 'SS' in gv:
         if 'Iso' in gv:
@@ -178,13 +177,17 @@ def gaba_vs_psychophys_plot(gv, gr, **kwargs):
         else:
             print('Unknown orientation...')
 
-    newax = g.fig.add_axes([0.85, 0.85, 0.1, 0.1], anchor='NE')
+    #if bbox:
+    #    pts = bbox.get_points()
+    #    print(pts)
+    #    newax = g.fig.add_axes([pts[0][0], pts[0][1], 0.1, 0.1], anchor='NE')
+    #else:
+    newax = g.fig.add_axes(legend_box, anchor='NE')
     newax.imshow(im)
     newax.axis('off')
 
     plt.close(g.fig)
     return(g)
-
 
 def gaba_vs_psychophys_plot_2line(gv, gr, **kwargs):
     xvar = "GABA"
