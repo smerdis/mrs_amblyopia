@@ -13,6 +13,8 @@ from matplotlib.offsetbox import (OffsetImage,
                                   AnnotationBbox)
 import seaborn as sns
 
+import scipy.stats as st
+
 import itertools as it
 
 ## Plotting functions
@@ -145,68 +147,71 @@ def population_fit_plot_pct(x, y, **kwargs):
             ax.errorbar(data=g, x=x, y=y,fmt=fmt_obs, **kwargs)
             ax.axhline(y=1,ls='dotted')
 
-def gaba_vs_psychophys_plot(gv, gr, legend_box = [0.87, 0.55, 0.1, 0.1], **kwargs):
+def annotate_n(xcol, ycol, tracecol, **kwargs):
+    """Annotate each level of hue variable on each facet of graph (i.e. multiple times per facet)"""
+    ax = plt.gca()
+    rho_result = st.spearmanr(xcol, ycol)
+    trace = tracecol.unique()[0] # 'Persons with\nAmblyopia, DE' etc
+    colors = kwargs['palette']
+    n_thistrace = len(tracecol)
+    assert(n_thistrace==len(xcol==len(ycol)))
+    annotation = f"N={n_thistrace}, rho={rho_result.correlation:.3f}"#, p={rho_result.pvalue:.3f}"
+    if trace == "Persons with\nAmblyopia, DE" or trace=="Normally-sighted\npersons, DE":
+        pos = (0.5, 0.85)
+        if trace == "Persons with\nAmblyopia, DE":
+            color = colors[0]
+        if trace=="Normally-sighted\npersons, DE":
+            color = colors[2]
+    if trace == "Persons with\nAmblyopia, NDE" or trace=="Normally-sighted\npersons, NDE":
+        pos = (0.5, 0.8)
+        if trace == "Persons with\nAmblyopia, NDE":
+            color=colors[1]
+        if trace=="Normally-sighted\npersons, NDE":
+            color=colors[3]
+    ax.text(*pos, annotation, transform=ax.transAxes, fontdict={'color': color}, horizontalalignment='center')
+
+def gaba_vs_psychophys_plot(gv, gr, legend_box = [0.89, 0.55, 0.1, 0.1], legend_img = True, **kwargs):
+    """Plotting function for GABA vs. psychophysical measures, with annotations etc."""
     print(gv)
-    xvar = "GABA"
-    yvar = "value"
-    x_lbl = "GABA (relative to creatine)"
-    y_lbl = {'BaselineThresh':'Baseline Threshold (C%)',
-            'RelMCToPred':'Relative Mask Contrast to predict threshold at',
-            'ThreshPredCritical':'Predicted threshold elevation (multiples of baseline)',
-            'DepthOfSuppressionPred':'Depth of suppression (multiples of baseline threshold)\nnegative indicates facilitation',
-            'ThreshPredCriticalUnnorm':'Predicted threshold elevation (C%)',
-            'slope':'Slope of perceptual suppression fit line',
-            'y_int':'y-intercept of perceptual suppression fit line'}
-    g = sns.lmplot(data=gr, x=xvar, y=yvar, **kwargs)
-    g.set(xlim=[.18, .23])
-    g.set_axis_labels(x_lbl, y_lbl[gv[-1]])
-    g.fig.suptitle(', '.join(gv), fontsize=16, y=0.97)
+    with sns.plotting_context(context="paper", font_scale=1.2):
+        xvar = "GABA"
+        yvar = "value"
+        g = sns.lmplot(data=gr, x=xvar, y=yvar, **kwargs)
+        g.map(annotate_n, 'GABA', 'value', 'Trace', palette=kwargs['palette']) #runs on each level of hue in each facet
 
-    #print(g.fig.get_figwidth())
+        for ax in g.axes.flat: #set various things on each facet
+            ax.yaxis.set_major_formatter(tick.FormatStrFormatter('%.2f'))
+            if gv[-1] == "ThreshPredCritical":
+                ax.axhline(1, color='grey', linestyle='dotted') # facilitation-suppression line
 
-    if g._legend:
-        g._legend.set_title(f"Eye which\nviewed target")
-        #bbox = g._legend.get_bbox_to_anchor()
-        #print(bbox)
+        if g._legend:
+            g._legend.set_title(f"Target presented to")
+            g._legend.set_bbox_to_anchor([legend_box[0], legend_box[1]-0.16, legend_box[2], legend_box[3]])
 
-    if 'SS' in gv:
-        if 'Iso' in gv:
-            im = plt.imread(f"/Users/smerdis/Dropbox/Documents/cal/silverlab/mrs-amblyopia/ss-iso-targetandmask.png")
-        elif 'Cross' in gv:
-            im = plt.imread(f"/Users/smerdis/Dropbox/Documents/cal/silverlab/mrs-amblyopia/ss-cross-targetandmask.png")
-        else:
-            print('Unknown orientation...')
+        g.set(xlim=[.18, .23])
 
-    #if bbox:
-    #    pts = bbox.get_points()
-    #    print(pts)
-    #    newax = g.fig.add_axes([pts[0][0], pts[0][1], 0.1, 0.1], anchor='NE')
-    #else:
-    newax = g.fig.add_axes(legend_box, anchor='NE')
-    newax.imshow(im)
-    newax.axis('off')
+        x_lbl = "GABA:Creatine ratio"
+        y_lbl = {'BaselineThresh':'Baseline Threshold (C%)',
+                'RelMCToPred':'Relative Mask Contrast to predict threshold at',
+                #'ThreshPredCritical':'Predicted threshold elevation, multiples of baseline',
+                'ThreshPredCritical':'Predicted threshold elevation, multiples of baseline\n(>1 indicates suppression, <1 facilitation)',
+                'DepthOfSuppressionPred':'Depth of suppression, multiples of baseline threshold\nnegative indicates facilitation',
+                'ThreshPredCriticalUnnorm':'Predicted threshold elevation (C%)',
+                'slope':'Slope of perceptual suppression fit line',
+                'y_int':'y-intercept of perceptual suppression fit line'}
+        g.set_axis_labels(x_lbl, y_lbl[gv[-1]])
 
-    plt.close(g.fig)
-    return(g)
+        if 'SS' in gv and legend_img: # display legend schematic image
+            if 'Iso' in gv:
+                im = plt.imread(f"/Users/smerdis/Dropbox/Documents/cal/silverlab/mrs-amblyopia/ss-iso-targetandmask.png")
+            elif 'Cross' in gv:
+                im = plt.imread(f"/Users/smerdis/Dropbox/Documents/cal/silverlab/mrs-amblyopia/ss-cross-targetandmask.png")
+            else:
+                print('Unknown orientation...')
+            newax = g.fig.add_axes(legend_box, anchor='NE')
+            newax.imshow(im)
+            newax.axis('off')
 
-def gaba_vs_psychophys_plot_2line(gv, gr, **kwargs):
-    xvar = "GABA"
-    x_lbl = "GABA (relative to creatine)"
-    yvar = "value"
-    y_lbl = {'BaselineThresh':'Baseline Threshold (C%)',
-            'RelMCToPred':'Relative Mask Contrast to predict threshold at',
-            'ThreshPredCritical':'Predicted threshold elevation (multiples of baseline)',
-            'DepthOfSuppressionPred':'Depth of suppression (multiples of baseline threshold)\nnegative indicates facilitation',
-            'ThreshPredCriticalUnnorm':'Predicted threshold elevation (C%)',
-            'slope':'Slope of perceptual suppression fit line',
-            'y_int':'y-intercept of perceptual suppression fit line'}
-    g = sns.lmplot(data=gr, row='Orientation',
-              col='Presentation', # facet rows and columns
-              x=xvar, y=yvar, hue='Eye', sharey=True, markers=["o","x"], **kwargs)
-    g.set(xlim=[.18, .23])
-    g.fig.suptitle(', '.join(gv), fontsize=16, y=0.97)
-    g.fig.subplots_adjust(top=.9, right=.8)
-    g.set_axis_labels(x_lbl, y_lbl[gv[-1]])
     plt.close(g.fig)
     return(g)
 
