@@ -188,9 +188,11 @@ def compare_rs(df, n_boot=2, verbose=False, resample=False):
               df[['Population','Eye','Subject','GABA','value']].head(),
               sep="\n")
     corrs = df.groupby(['Population', 'Eye']).apply(calc_rs)
+    print(corrs)
     a_real, c_real, p_real = rs_diff(corrs)
     print(f"Real (observed) r_s differences:\nA\tC\tP\n{a_real:.3}\t{c_real:.3}\t{p_real:.3}")
     rs_permute = np.empty((3, n_boot), dtype=np.float32)
+    corrs_permute = np.empty((4, n_boot), dtype=np.float32)
     for i in range(n_boot):
         # sample with replacement
         if resample:
@@ -207,12 +209,21 @@ def compare_rs(df, n_boot=2, verbose=False, resample=False):
             print(f"Amb Nde-De: {amb_diff}")
             print(f"Con Nde-De: {con_diff}")
             print(f"Amb - Con: {pop_diff}")
-        rs_permute[:, i] = [amb_diff, con_diff, pop_diff]        
+        rs_permute[:, i] = [amb_diff, con_diff, pop_diff]
+        amb_de = permute_corrs.loc['Amblyope','De']['correlation']
+        amb_nde = permute_corrs.loc['Amblyope', 'Nde']['correlation']
+        con_de = permute_corrs.loc['Control','De']['correlation']
+        con_nde = permute_corrs.loc['Control', 'Nde']['correlation']
+        corrs_permute[:, i] = [amb_de, amb_nde, con_de, con_nde]     
     comps = ['A', 'C', 'P']
+    corrs_in_order = ['AD', 'AN', 'CD', 'CN']
     print("Percentiles for permuted r_s differences:")
     for i in range(3):
-        p = np.percentile(rs_permute[i, :], np.array([0, 2.5, 5, 25, 50, 75, 95, 97.5, 100]))
+        p = np.percentile(rs_permute[i, :], np.array([0, 0.5, 1, 1.5, 2, 2.5, 5, 25, 50, 75, 95, 97.5, 100]))
         print(comps[i], p)
+    for i in range(4):
+        p = np.percentile(corrs_permute[i, :], np.array([0, 0.5, 1, 1.5, 2, 2.5, 5, 25, 50, 75, 95, 97.5, 100]))
+        print(corrs_in_order[i], p)
     rs_df = pd.DataFrame({'amb_rdiff':rs_permute[0, :],
                           'con_rdiff':rs_permute[1, :],
                           'pop_rdiff':rs_permute[2, :]})
