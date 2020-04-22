@@ -42,24 +42,24 @@ def group_scatter_plot(x, y, **kwargs):
     yerr = kwargs.pop("yerr")
     # control the plotting
     fig, ax = plt.subplots(1, figsize=(6.2,5.1))
-    ax.set_xscale('log')
-    ax.set_yscale('log')
-    ax.set_ylim([0.6, 4.2])
-    ax.get_xaxis().set_major_locator(tick.LogLocator(subs=[1,2,3,4,5,6,7,8,9]))
-    ax.set_xticklabels([])
-    ax.get_yaxis().set_major_locator(tick.LogLocator(subs=[1,2,3,4,5,6,7,8,9]))
-    ax.set_yticklabels([])
-    ax.get_yaxis().set_major_formatter(tick.NullFormatter())
-    ax.get_yaxis().set_minor_formatter(tick.NullFormatter())
+    # ax.set_xscale('log')
+    # ax.set_yscale('log')
+    # ax.set_ylim([0.6, 4.2])
+    # ax.get_xaxis().set_major_locator(tick.LogLocator(subs=[1,2,3,4,5,6,7,8,9]))
+    # ax.set_xticklabels([])
+    # ax.get_yaxis().set_major_locator(tick.LogLocator(subs=[1,2,3,4,5,6,7,8,9]))
+    # ax.set_yticklabels([])
+    # ax.get_yaxis().set_major_formatter(tick.NullFormatter())
+    # ax.get_yaxis().set_minor_formatter(tick.NullFormatter())
 
     # Plot the eyes separately so we can apply different styling
     traces = data.groupby('Trace')
     fmt = {'Amblyope-Nde':':x', 'Amblyope-De':'--s',
            'Control-Nde':':x', 'Control-De':'--s'}
-    for trace, trace_df in traces:
-        ses = trace_df[yerr].values
-        ax.errorbar(data=trace_df, x=x, y=y, yerr=ses, fmt=fmt[trace], **kwargs)
-    ax.axhline(y=1, ls='dotted', color='gray')
+    # for trace, trace_df in traces:
+    #     ses = trace_df[yerr].values
+    #     ax.errorbar(data=trace_df, x=x, y=y, yerr=ses, fmt=fmt[trace], **kwargs)
+    # ax.axhline(y=1, ls='dotted', color='gray')
     return(fig)
 
 def subject_fit_plot(x, y, **kwargs):
@@ -68,16 +68,15 @@ def subject_fit_plot(x, y, **kwargs):
     fmt_obs = kwargs.pop("fmt_obs")
     fmt_pred = kwargs.pop("fmt_pred")
     ses = data[kwargs.pop("yerr")].values # SE's of actually observed threshold elevations
-    predY = data[kwargs.pop("Ycol")].values
-    #relMCToPred = data['RelMCToPred'].values
-    #assert(np.all(relMCToPred==relMCToPred[0])) # check all the same
+    predY = kwargs.pop("Ycol")
+    print(x, y, ses, predY)
 
     # control the plotting
     ax = plt.gca()
-    ax.set_xscale('log')
-    ax.set_yscale('log')
-    ax.get_xaxis().set_major_locator(tick.LogLocator())
-    ax.get_yaxis().set_major_locator(tick.LogLocator())
+    # ax.set_xscale('log')
+    # ax.set_yscale('log')
+    # ax.get_xaxis().set_major_locator(tick.LogLocator())
+    # ax.get_yaxis().set_major_locator(tick.LogLocator())
     #ax.get_xaxis().set_major_formatter(tick.ScalarFormatter())
     #ax.get_yaxis().set_major_formatter(tick.ScalarFormatter())
     #ax.set_ylim([0.5, np.max([np.max(data[y])+1])])
@@ -85,7 +84,6 @@ def subject_fit_plot(x, y, **kwargs):
     ax.errorbar(data=data, x=x, y=y, yerr=ses,fmt=fmt_obs, **kwargs)
     ax.errorbar(data=data, x=x, y=predY,fmt=fmt_pred, **kwargs)
     ax.axhline(y=1,ls='dotted')
-    #ax.axvline(x=relMCToPred[0], ls='dotted')
 
 def subject_fit_plot_pct(x, y, **kwargs):
     # set up the data frame for plotting, get kwargs etc
@@ -170,7 +168,7 @@ def annotate_n(xcol, ycol, tracecol, **kwargs):
             color=colors[3]
     ax.text(*pos, annotation, transform=ax.transAxes, fontdict={'color': color}, horizontalalignment='center')
 
-def gaba_vs_psychophys_plot(gv, gr, legend_box = [0.89, 0.55, 0.1, 0.1], legend_img = True, **kwargs):
+def gaba_vs_psychophys_plot(gv, gr, legend_box = [0.89, 0.55, 0.1, 0.1], legend_img = True, log = False, ylim=(.1, 10), **kwargs):
     """Plotting function for GABA vs. psychophysical measures, with annotations etc."""
     print(gv)
     with sns.plotting_context(context="paper", font_scale=1.2):
@@ -180,9 +178,13 @@ def gaba_vs_psychophys_plot(gv, gr, legend_box = [0.89, 0.55, 0.1, 0.1], legend_
         g.map(annotate_n, 'GABA', 'value', 'Trace', palette=kwargs['palette']) #runs on each level of hue in each facet
 
         for ax in g.axes.flat: #set various things on each facet
-            ax.yaxis.set_major_formatter(tick.FormatStrFormatter('%.2f'))
+            if log:
+                ax.yaxis.set_major_locator(tick.LogLocator(subs=range(1, 10)))
+                ax.set_yscale('log')
+                ax.set_ylim(ylim)
             if gv[-1] == "ThreshPredCritical":
                 ax.axhline(1, color='grey', linestyle='dotted') # facilitation-suppression line
+            ax.yaxis.set_major_formatter(tick.FormatStrFormatter('%.2f'))
 
         if g._legend:
             g._legend.set_title(f"Target presented to")
@@ -255,16 +257,18 @@ def gaba_vs_psychophys_plot_2line_2eye(gv, gr, **kwargs):
     yvar = "Nde-De"
     y_lbl = {'BaselineThresh':'Interocular Difference in Baseline Threshold (NDE-DE, C%)',
             'RelMCToPred':'Relative Mask Contrast to predict threshold at',
-            'ThreshPredCritical':'Interocular difference in predicted threshold elevation (NDE-DE, multiples of baseline)',
+            'ThreshPredCritical':'Interocular difference in\npredicted threshold elevation\n(NDE-DE, multiples of baseline)',
             'DepthOfSuppressionPred':'Interocular difference in predicted depth of suppression\n(in multiples of baseline threshold)',
             'ThreshPredCriticalUnnorm':'Interocular difference in predicted threshold elevation (NDE-DE, C%)',
             'slope':'Interocular difference in slope of perceptual suppression fit line',
             'y_int':'Interocular difference in y-intercept of perceptual suppression fit line'}
     g = sns.lmplot(data=gr, 
                   col='Presentation',hue='Population',# facet rows and columns
-                  x=xvar, y=yvar,sharey=True, **kwargs)
-    g.fig.suptitle(':'.join(gv), fontsize=16, y=0.97)
-    g.fig.subplots_adjust(top=.9, right=.8)
+                  x=xvar, y=yvar,sharey=True, ci=None, **kwargs)
+    g._legend.set_title('')
+    g.set_titles('')
+    #g.fig.suptitle(':'.join(gv), fontsize=16, y=0.97)
+    g.fig.subplots_adjust(left=.15, top=.9, right=.8)
     g.set_axis_labels(x_lbl, y_lbl[gv[-1]])
     plt.close(g.fig)
     return(g)
@@ -319,12 +323,12 @@ def group_facet_plots(df, plot_func, ofn, grouping_vars, row, col, x, y, col_wra
     with PdfPages(ofn) as pdf:
         grouped = df.groupby(grouping_vars)
         for gv, gr in grouped: # each page
-            g = sns.FacetGrid(gr, row=row, col=col, hue=hue, col_wrap=col_wrap, height=6, aspect=1.5, sharex=False, sharey=True, margin_titles=True)
+            g = sns.FacetGrid(gr, row=row, col=col, hue=hue, col_wrap=col_wrap, height=6, aspect=1.5, sharex=False, sharey=True, margin_titles=False)
             g = g.map_dataframe(plot_func,x,y,**kwargs)
             print('Plotting %s'%'.'.join(gv))
             if legend:
                 g = g.add_legend()
-            g.fig.suptitle(':'.join(gv), fontsize=14, y=0.97)
+            g.fig.suptitle('')
             g.fig.subplots_adjust(top=.9, right=.8)
             x_lbl = "Relative Mask Contrast" if x=="RelMaskContrast" else x
             y_lbl = "Threshold Elevation (multiples of baseline)" if y=="ThreshElev" else y
