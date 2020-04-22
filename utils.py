@@ -44,18 +44,19 @@ def describe_baselines(g):
     d = {'N':N, 'mean':baseline_mean, 'std':baseline_std, 'SEM':baseline_SEM}
     return pd.Series(d)
 
-def get_interocular_baseline_diff(g):
+def get_interocular_baseline_diff(g, field="BaselineThresh"):
     if len(g) < 2:
         return g
     else:
         assert(len(g)==2)
-        nde_mean = g[g.Eye=='Nde']['mean'].iloc[0]
-        de_mean = g[g.Eye=='De']['mean'].iloc[0]
+        nde_mean = g[g.Eye=='Nde'][field].iloc[0]
+        de_mean = g[g.Eye=='De'][field].iloc[0]
         g['BaselineDiff'] = nde_mean - de_mean
+        g['BaselineRatio'] = nde_mean/de_mean
         return g
 
-def make_baseline_df_to_plot(df):
-    return df.groupby('Population').apply(get_interocular_baseline_diff)
+def make_baseline_df_to_plot(df, field):
+    return df.groupby('Population').apply(get_interocular_baseline_diff, field)
 
 def linear_fit(df, x, y):
     result = sm.ols(formula=f"{y} ~ {x}", data=df).fit()
@@ -182,17 +183,27 @@ def rs_diff(df):
     return [amb_diff, con_diff, pop_diff]
 
 def compare_rs(df, n_boot=2, verbose=False, resample=False):
-    print(df.name)
+    print(f"\n\n****{df.name}*****\n")
     if verbose:
         print(f"given df: (head)",
               df[['Population','Eye','Subject','GABA','value']].head(),
               sep="\n")
     corrs = df.groupby(['Population', 'Eye']).apply(calc_rs)
-    print(corrs)
-    a_real, c_real, p_real = rs_diff(corrs)
-    print(f"Real (observed) r_s differences:\nA\tC\tP\n{a_real:.3}\t{c_real:.3}\t{p_real:.3}")
-    rs_permute = np.empty((3, n_boot), dtype=np.float32)
+    observed_corrs_ordered = (corrs.loc['Amblyope','De']['correlation'],
+                            corrs.loc['Amblyope', 'Nde']['correlation'],
+                            corrs.loc['Control','De']['correlation'],
+                            corrs.loc['Control', 'Nde']['correlation'])
+    #print(corrs, sep="\n")
+    # Structure to hold the bootstrap iterations of the individual eye correlations
     corrs_permute = np.empty((4, n_boot), dtype=np.float32)
+
+    # Now calculate the NDE-DE diff for AMB and CON, and also the difference between these (p_real)
+    a_real, c_real, p_real = rs_diff(corrs)
+    #print(f"Real (observed) r_s differences:\nA\tC\tP\n{a_real:.3}\t{c_real:.3}\t{p_real:.3}")
+    real_diffs = (a_real, c_real, p_real)
+    # Bootstrap structure for the differences
+    rs_permute = np.empty((3, n_boot), dtype=np.float32)
+
     for i in range(n_boot):
         # sample with replacement
         if resample:
@@ -215,15 +226,27 @@ def compare_rs(df, n_boot=2, verbose=False, resample=False):
         con_de = permute_corrs.loc['Control','De']['correlation']
         con_nde = permute_corrs.loc['Control', 'Nde']['correlation']
         corrs_permute[:, i] = [amb_de, amb_nde, con_de, con_nde]     
-    comps = ['A', 'C', 'P']
-    corrs_in_order = ['AD', 'AN', 'CD', 'CN']
-    print("Percentiles for permuted r_s differences:")
-    for i in range(3):
-        p = np.percentile(rs_permute[i, :], np.array([0, 0.5, 1, 1.5, 2, 2.5, 5, 25, 50, 75, 95, 97.5, 100]))
-        print(comps[i], p)
+    comps = ['Amb NDE vs DE', 'Con NDE vs DE', 'Pop Amb vs Con']
+    corrs_in_order = ['Amb DE', 'Amb NDE', 'Con DE', 'Con NDE']
+    print("\nPercentiles for individual eye correlations:")
     for i in range(4):
-        p = np.percentile(corrs_permute[i, :], np.array([0, 0.5, 1, 1.5, 2, 2.5, 5, 25, 50, 75, 95, 97.5, 100]))
-        print(corrs_in_order[i], p)
+        #p = np.percentile(corrs_permute[i, :], np.array([0, 0.5, 1, 1.5, 2, 2.5, 5, 25, 50, 75, 95, 97.5, 100]))
+        obs_pct = (np.count_nonzero(observed_corrs_ordered[i]>corrs_permute[i, :])/n_boot)
+        if obs_pct > .5:
+            pval = (1-obs_pct)*2
+        else:
+            pval = obs_pct * 2
+        print(corrs_in_order[i], f"\nObserved value of {observed_corrs_ordered[i]:.3f} is greater than {obs_pct:.3f} of bootstrap distribution, corresponding to p={pval:.3f}.")
+    print("\nPercentiles for permuted r_s differences:")
+    for i in range(3):
+        #p = np.percentile(rs_permute[i, :], np.array([0, 0.5, 1, 1.5, 2, 2.5, 5, 25, 50, 75, 95, 97.5, 100]))
+        obs_pct = (np.count_nonzero(real_diffs[i]>rs_permute[i, :])/n_boot)
+        if obs_pct > .5:
+            pval = (1-obs_pct)*2
+        else:
+            pval = obs_pct * 2
+        print(comps[i], f"\nObserved value of {real_diffs[i]:.3f} is greater than {obs_pct:.3f} of bootstrap distribution, corresponding to p={pval:.3f}.")
+    
     rs_df = pd.DataFrame({'amb_rdiff':rs_permute[0, :],
                           'con_rdiff':rs_permute[1, :],
                           'pop_rdiff':rs_permute[2, :]})
