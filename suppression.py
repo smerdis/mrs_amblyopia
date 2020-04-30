@@ -83,7 +83,8 @@ def subject_fit_plot(x, y, **kwargs):
     #ax.set_xlim([0.5, 10])
     ax.errorbar(data=data, x=x, y=y, yerr=ses,fmt=fmt_obs, **kwargs)
     ax.errorbar(data=data, x=x, y=predY,fmt=fmt_pred, **kwargs)
-    ax.axhline(y=1,ls='dotted')
+    ax.axhline(y=1, ls='dotted', color='grey')
+    ax.axvline(x=2, ls='dotted', color='red')
 
 def subject_fit_plot_pct(x, y, **kwargs):
     # set up the data frame for plotting, get kwargs etc
@@ -144,6 +145,27 @@ def population_fit_plot_pct(x, y, **kwargs):
         for gv, g in gpop.groupby(["Subject"]):            
             ax.errorbar(data=g, x=x, y=y,fmt=fmt_obs, **kwargs)
             ax.axhline(y=1,ls='dotted')
+
+def group_facet_plots(df, plot_func, ofn, grouping_vars, row, col, x, y, col_wrap=None, hue=None, legend=True, **kwargs):
+    with PdfPages(ofn) as pdf:
+        grouped = df.groupby(grouping_vars)
+        for gv, gr in grouped: # each page
+            g = sns.FacetGrid(gr, row=row, col=col, hue=hue, col_wrap=col_wrap, height=6, aspect=1.5,
+                sharex=False, sharey=True, margin_titles=False, legend_out=False, palette=['#6600ff', '#009966'])
+            g = g.map_dataframe(plot_func,x,y,**kwargs)
+            print('Plotting %s'%'.'.join(gv))
+            if legend:
+                g = g.add_legend(title="")
+            g.fig.suptitle('')
+            g.fig.subplots_adjust(top=.9, right=.8)
+            x_lbl = "Relative Mask Contrast (multiples of baseline)" if x=="RelMaskContrast" else x
+            y_lbl = "Threshold Elevation (multiples of baseline)" if y=="ThreshElev" else y
+            g.set_axis_labels(x_lbl, y_lbl)
+            g.set_titles('')
+            pdf.savefig(g.fig)
+            plt.close(g.fig)
+    print('Plots saved at',ofn)
+    plt.close('all')
 
 def annotate_n(xcol, ycol, tracecol, **kwargs):
     """Annotate each level of hue variable on each facet of graph (i.e. multiple times per facet)"""
@@ -318,22 +340,3 @@ def gaba_vs_psychophys_plot_4line(gv, gr):
     g.fig.set_figwidth(10)
     plt.close(g.fig)
     return(g)
-
-def group_facet_plots(df, plot_func, ofn, grouping_vars, row, col, x, y, col_wrap=None, hue=None, legend=True, **kwargs):
-    with PdfPages(ofn) as pdf:
-        grouped = df.groupby(grouping_vars)
-        for gv, gr in grouped: # each page
-            g = sns.FacetGrid(gr, row=row, col=col, hue=hue, col_wrap=col_wrap, height=6, aspect=1.5, sharex=False, sharey=True, margin_titles=False)
-            g = g.map_dataframe(plot_func,x,y,**kwargs)
-            print('Plotting %s'%'.'.join(gv))
-            if legend:
-                g = g.add_legend()
-            g.fig.suptitle('')
-            g.fig.subplots_adjust(top=.9, right=.8)
-            x_lbl = "Relative Mask Contrast" if x=="RelMaskContrast" else x
-            y_lbl = "Threshold Elevation (multiples of baseline)" if y=="ThreshElev" else y
-            g.set_axis_labels(x_lbl, y_lbl)
-            pdf.savefig(g.fig)
-            plt.close(g.fig)
-    print('Plots saved at',ofn)
-    plt.close('all')

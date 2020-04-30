@@ -28,7 +28,7 @@ def load_fmri(fmri_fn):
     return pd.read_csv(fmri_fn, sep='\t')
 
 def test_baseline_diffs(g):
-    print(g.iloc[0][['Task', 'Orientation', 'Presentation', 'Population']])
+    print(g.iloc[0][['Task', 'Orientation', 'Presentation', 'Population']], pd.Series.value_counts(g['Subject']))
     ndes = np.unique(g[g.Eye=='Nde']['BaselineThresh'])
     des = np.unique(g[g.Eye=='De']['BaselineThresh'])
     print(ndes, len(ndes), '\n', des, len(des))
