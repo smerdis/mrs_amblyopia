@@ -177,20 +177,20 @@ def annotate_n(xcol, ycol, tracecol, **kwargs):
     assert(n_thistrace==len(xcol==len(ycol)))
     annotation = f"N={n_thistrace}, rho={rho_result.correlation:.3f}"#, p={rho_result.pvalue:.3f}"
     if trace == "Persons with\nAmblyopia, DE" or trace=="Normally-sighted\npersons, DE":
-        pos = (0.5, 0.85)
+        pos = (0.5, 0.9)
         if trace == "Persons with\nAmblyopia, DE":
             color = colors[0]
         if trace=="Normally-sighted\npersons, DE":
             color = colors[2]
     if trace == "Persons with\nAmblyopia, NDE" or trace=="Normally-sighted\npersons, NDE":
-        pos = (0.5, 0.8)
+        pos = (0.5, 0.85)
         if trace == "Persons with\nAmblyopia, NDE":
             color=colors[1]
         if trace=="Normally-sighted\npersons, NDE":
             color=colors[3]
-    ax.text(*pos, annotation, transform=ax.transAxes, fontdict={'color': color}, horizontalalignment='center')
+    ax.text(*pos, annotation, fontsize=16, transform=ax.transAxes, fontdict={'color': color}, horizontalalignment='center')
 
-def gaba_vs_psychophys_plot(gv, gr, legend_box = [0.89, 0.55, 0.1, 0.1], legend_img = True, log = False, ylim=(.1, 10), **kwargs):
+def gaba_vs_psychophys_plot(gv, gr, legend_box = [0.89, 0.55, 0.1, 0.1], legend_img = True, log = False, ylim = None, **kwargs):
     """Plotting function for GABA vs. psychophysical measures, with annotations etc."""
     print(gv)
     with sns.plotting_context(context="paper", font_scale=1.2):
@@ -203,16 +203,18 @@ def gaba_vs_psychophys_plot(gv, gr, legend_box = [0.89, 0.55, 0.1, 0.1], legend_
             if log:
                 ax.yaxis.set_major_locator(tick.LogLocator(subs=range(1, 10)))
                 ax.set_yscale('log')
-                ax.set_ylim(ylim)
             if gv[-1] == "ThreshPredCritical":
                 ax.axhline(1, color='grey', linestyle='dotted') # facilitation-suppression line
+            if ylim is not None:
+                ax.set_ylim(ylim)
             ax.yaxis.set_major_formatter(tick.FormatStrFormatter('%.2f'))
+            ax.yaxis.set_minor_formatter(tick.FormatStrFormatter('%.2f'))
 
         if g._legend:
             g._legend.set_title(f"Target presented to")
             g._legend.set_bbox_to_anchor([legend_box[0], legend_box[1]-0.16, legend_box[2], legend_box[3]])
 
-        g.set(xlim=[.18, .23])
+        #g.set(xlim=[.18, .23])
 
         x_lbl = "GABA:Creatine ratio"
         y_lbl = {'BaselineThresh':'Baseline Threshold (C%)',
