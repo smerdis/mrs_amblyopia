@@ -183,7 +183,7 @@ def rs_diff(df):
     return [amb_diff, con_diff, pop_diff]
 
 def compare_rs(df, n_boot=2, verbose=False, resample=False):
-    print(f"\n\n****{df.name}*****\n")
+    #print(f"\n\n****{df.name}*****\n")
     if verbose:
         print(f"given df: (head)",
               df[['Population','Eye','Subject','GABA','value']].head(),
@@ -196,6 +196,8 @@ def compare_rs(df, n_boot=2, verbose=False, resample=False):
     #print(corrs, sep="\n")
     # Structure to hold the bootstrap iterations of the individual eye correlations
     corrs_permute = np.empty((4, n_boot), dtype=np.float32)
+    # Structure to hold the final bootstrapped p-values for each of those 4 correlations
+    pvals_corrs = np.zeros(4)
 
     # Now calculate the NDE-DE diff for AMB and CON, and also the difference between these (p_real)
     a_real, c_real, p_real = rs_diff(corrs)
@@ -203,6 +205,8 @@ def compare_rs(df, n_boot=2, verbose=False, resample=False):
     real_diffs = (a_real, c_real, p_real)
     # Bootstrap structure for the differences
     rs_permute = np.empty((3, n_boot), dtype=np.float32)
+    # Structure to hold the final bootstrapped p-values for each of those 3 differences
+    pvals_diffs = np.zeros(3)
 
     for i in range(n_boot):
         # sample with replacement
@@ -236,6 +240,7 @@ def compare_rs(df, n_boot=2, verbose=False, resample=False):
             pval = (1-obs_pct)*2
         else:
             pval = obs_pct * 2
+        pvals_corrs[i] = pval
         print(corrs_in_order[i], f"\nObserved value of {observed_corrs_ordered[i]:.3f} is greater than {obs_pct:.3f} of bootstrap distribution, corresponding to p={pval:.3f}.")
     print("\nPercentiles for permuted r_s differences:")
     for i in range(3):
@@ -245,12 +250,18 @@ def compare_rs(df, n_boot=2, verbose=False, resample=False):
             pval = (1-obs_pct)*2
         else:
             pval = obs_pct * 2
+        pvals_diffs[i] = pval
         print(comps[i], f"\nObserved value of {real_diffs[i]:.3f} is greater than {obs_pct:.3f} of bootstrap distribution, corresponding to p={pval:.3f}.")
     
-    rs_df = pd.DataFrame({'amb_rdiff':rs_permute[0, :],
-                          'con_rdiff':rs_permute[1, :],
-                          'pop_rdiff':rs_permute[2, :]})
-    return rs_df
+    rs_df = pd.DataFrame({
+        'amb_de':corrs_permute[0, :],
+        'amb_nde':corrs_permute[1, :],
+        'con_de':corrs_permute[2, :],
+        'con_nde':corrs_permute[3, :],
+        'amb_rdiff':rs_permute[0, :],
+        'con_rdiff':rs_permute[1, :],
+        'pop_rdiff':rs_permute[2, :]})
+    return rs_df, pvals_corrs, pvals_diffs
 
 def calculate_orientation_selective_suppression(df, **kwargs):
     #print(df[['Orientation', 'value']])

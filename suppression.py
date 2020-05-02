@@ -17,6 +17,8 @@ import scipy.stats as st
 
 import itertools as it
 
+import utils
+
 ## Plotting functions
 def scaterror_plot(x, y, **kwargs):
     #'''This function is designed to be called with FacetGrid.map_dataframe() to make faceted plots of various conditions.'''
@@ -172,22 +174,27 @@ def annotate_n(xcol, ycol, tracecol, **kwargs):
     ax = plt.gca()
     rho_result = st.spearmanr(xcol, ycol)
     trace = tracecol.unique()[0] # 'Persons with\nAmblyopia, DE' etc
+    pvals = kwargs.pop("pvals") #pvals from bootstrap
     colors = kwargs['palette']
     n_thistrace = len(tracecol)
     assert(n_thistrace==len(xcol==len(ycol)))
-    annotation = f"N={n_thistrace}, rho={rho_result.correlation:.3f}"#, p={rho_result.pvalue:.3f}"
     if trace == "Persons with\nAmblyopia, DE" or trace=="Normally-sighted\npersons, DE":
         pos = (0.5, 0.9)
         if trace == "Persons with\nAmblyopia, DE":
             color = colors[0]
+            pval = pvals[0]
         if trace=="Normally-sighted\npersons, DE":
             color = colors[2]
+            pval = pvals[2]
     if trace == "Persons with\nAmblyopia, NDE" or trace=="Normally-sighted\npersons, NDE":
         pos = (0.5, 0.85)
         if trace == "Persons with\nAmblyopia, NDE":
             color=colors[1]
+            pval=pvals[1]
         if trace=="Normally-sighted\npersons, NDE":
             color=colors[3]
+            pval=pvals[3]
+    annotation = f"N={n_thistrace}, rho={rho_result.correlation:.3f}, p={pval:.3f}"
     ax.text(*pos, annotation, fontsize=16, transform=ax.transAxes, fontdict={'color': color}, horizontalalignment='center')
 
 def gaba_vs_psychophys_plot(gv, gr, legend_box = [0.89, 0.55, 0.1, 0.1], legend_img = True, log = False, ylim = None, **kwargs):
@@ -196,8 +203,13 @@ def gaba_vs_psychophys_plot(gv, gr, legend_box = [0.89, 0.55, 0.1, 0.1], legend_
     with sns.plotting_context(context="paper", font_scale=1.2):
         xvar = "GABA"
         yvar = "value"
+        if kwargs['n_boot']:
+            n_boot = kwargs['n_boot']
+        else:
+            n_boot = 1000
         g = sns.lmplot(data=gr, x=xvar, y=yvar, **kwargs)
-        g.map(annotate_n, 'GABA', 'value', 'Trace', palette=kwargs['palette']) #runs on each level of hue in each facet
+        iterations, pvals_corrs, pvals_diffs = utils.compare_rs(gr, n_boot=n_boot, resample=False)
+        g.map(annotate_n, 'GABA', 'value', 'Trace', pvals=pvals_corrs, palette=kwargs['palette']) #runs on each level of hue in each facet
 
         for ax in g.axes.flat: #set various things on each facet
             if log:
