@@ -174,33 +174,37 @@ def annotate_n(xcol, ycol, tracecol, **kwargs):
     ax = plt.gca()
     rho_result = st.spearmanr(xcol, ycol)
     trace = tracecol.unique()[0] # 'Persons with\nAmblyopia, DE' etc
-    pvals = kwargs.pop("pvals") #pvals from bootstrap
+    if kwargs['pvals'] is not None:
+        pvals = kwargs.pop("pvals") #pvals from bootstrap
+    else:
+        pvals = None
     colors = kwargs['palette']
     n_thistrace = len(tracecol)
-    assert(n_thistrace==len(xcol==len(ycol)))
-    if trace == "Persons with\nAmblyopia, DE" or trace=="Normally-sighted\npersons, DE":
-        pos = (0.5, 0.9)
-        if trace == "Persons with\nAmblyopia, DE":
-            color = colors[0]
-            pval = pvals[0]
-        if trace=="Normally-sighted\npersons, DE":
-            color = colors[2]
-            pval = pvals[2]
-    if trace == "Persons with\nAmblyopia, NDE" or trace=="Normally-sighted\npersons, NDE":
-        pos = (0.5, 0.85)
-        if trace == "Persons with\nAmblyopia, NDE":
-            color=colors[1]
-            pval=pvals[1]
-        if trace=="Normally-sighted\npersons, NDE":
-            color=colors[3]
-            pval=pvals[3]
-    annotation = f"N={n_thistrace}, rho={rho_result.correlation:.3f}, p={pval:.3f}"
-    ax.text(*pos, annotation, fontsize=16, transform=ax.transAxes, fontdict={'color': color}, horizontalalignment='center')
+    assert(n_thistrace==len(xcol)==len(ycol))
+    if n_thistrace > 2:
+        if trace == "Persons with\nAmblyopia, DE" or trace=="Normally-sighted\npersons, DE":
+            pos = (0.5, 0.9)
+            if trace == "Persons with\nAmblyopia, DE":
+                color = colors[0]
+                pval = pvals[0]
+            if trace=="Normally-sighted\npersons, DE":
+                color = colors[2]
+                pval = pvals[2]
+        if trace == "Persons with\nAmblyopia, NDE" or trace=="Normally-sighted\npersons, NDE":
+            pos = (0.5, 0.85)
+            if trace == "Persons with\nAmblyopia, NDE":
+                color=colors[1]
+                pval=pvals[1]
+            if trace=="Normally-sighted\npersons, NDE":
+                color=colors[3]
+                pval=pvals[3]
+        annotation = fr"N={n_thistrace}, $\rho$={rho_result.correlation:.2f}, p={pval:.2f}"
+        ax.text(*pos, annotation, fontsize=16, transform=ax.transAxes, fontdict={'color': color}, horizontalalignment='center')
 
 def gaba_vs_psychophys_plot(gv, gr, legend_box = [0.89, 0.55, 0.1, 0.1], legend_img = True, log = False, ylim = None, **kwargs):
     """Plotting function for GABA vs. psychophysical measures, with annotations etc."""
-    print(gv)
-    with sns.plotting_context(context="paper", font_scale=1.2):
+    print(gv)#, gr)
+    with sns.plotting_context(context="paper", font_scale=1.0):
         xvar = "GABA"
         yvar = "value"
         if kwargs['n_boot']:
@@ -211,22 +215,39 @@ def gaba_vs_psychophys_plot(gv, gr, legend_box = [0.89, 0.55, 0.1, 0.1], legend_
         iterations, pvals_corrs, pvals_diffs = utils.compare_rs(gr, n_boot=n_boot, resample=False)
         g.map(annotate_n, 'GABA', 'value', 'Trace', pvals=pvals_corrs, palette=kwargs['palette']) #runs on each level of hue in each facet
 
-        for ax in g.axes.flat: #set various things on each facet
+        if 'SS' in gv and legend_img: # display legend schematic image
+            if 'Iso' in gv:
+                im = plt.imread(f"/Users/smerdis/Dropbox/Documents/cal/silverlab/mrs-amblyopia/ss-iso-targetandmask-12.png")
+            elif 'Cross' in gv:
+                im = plt.imread(f"/Users/smerdis/Dropbox/Documents/cal/silverlab/mrs-amblyopia/ss-cross-targetandmask.png")
+            else:
+                print('Unknown orientation...')
+
+        for axi, ax in enumerate(g.axes.flat): #set various things on each facet
             if log:
                 ax.yaxis.set_major_locator(tick.LogLocator(subs=range(1, 10)))
                 ax.set_yscale('log')
             if gv[-1] == "ThreshPredCritical":
                 ax.axhline(1, color='grey', linestyle='dotted') # facilitation-suppression line
             if ylim is not None:
-                ax.set_ylim(ylim)
+                if type(ylim[0]) is tuple: # tuple of tuples, i.e. different ylims for amb and con
+                    ax.set_ylim(*ylim[axi%2])
+                else:
+                    ax.set_ylim(*ylim)
             ax.yaxis.set_major_formatter(tick.FormatStrFormatter('%.2f'))
-            ax.yaxis.set_minor_formatter(tick.FormatStrFormatter('%.2f'))
+            #ax.yaxis.set_minor_formatter(tick.FormatStrFormatter('%.2f'))
+            ax.yaxis.set_minor_formatter(tick.NullFormatter())
+            #newax = g.fig.add_axes(legend_box[axi], anchor='NE')
+            #newax.imshow(im)
+            #newax.axis('off')
+            if 'nDicho' in gv:
+                ax.legend(loc='lower left', title='Target presented to:\n(other eye viewed surround)')
+            elif 'nMono' in gv:
+                ax.legend(loc='lower left', title='Target and surround\npresented to:')
 
         if g._legend:
             g._legend.set_title(f"Target presented to")
-            g._legend.set_bbox_to_anchor([legend_box[0], legend_box[1]-0.16, legend_box[2], legend_box[3]])
-
-        #g.set(xlim=[.18, .23])
+            #g._legend.set_bbox_to_anchor([legend_box[0], legend_box[1]-0.16, legend_box[2], legend_box[3]])
 
         x_lbl = "GABA:Creatine ratio"
         y_lbl = {'BaselineThresh':'Baseline Threshold (C%)',
@@ -238,17 +259,6 @@ def gaba_vs_psychophys_plot(gv, gr, legend_box = [0.89, 0.55, 0.1, 0.1], legend_
                 'slope':'Slope of perceptual suppression fit line',
                 'y_int':'y-intercept of perceptual suppression fit line'}
         g.set_axis_labels(x_lbl, y_lbl[gv[-1]])
-
-        if 'SS' in gv and legend_img: # display legend schematic image
-            if 'Iso' in gv:
-                im = plt.imread(f"/Users/smerdis/Dropbox/Documents/cal/silverlab/mrs-amblyopia/ss-iso-targetandmask.png")
-            elif 'Cross' in gv:
-                im = plt.imread(f"/Users/smerdis/Dropbox/Documents/cal/silverlab/mrs-amblyopia/ss-cross-targetandmask.png")
-            else:
-                print('Unknown orientation...')
-            newax = g.fig.add_axes(legend_box, anchor='NE')
-            newax.imshow(im)
-            newax.axis('off')
 
     plt.close(g.fig)
     return(g)
