@@ -111,6 +111,7 @@ def test_one_bin(ttg, y_col, test_func, **kwargs):
     # print(f"{ttg.name}",
     #     f"{nde} <= NDE, n={len(nde)}",
     #     f"{de} <= DE, n={len(de)}", sep='\n')
+    print(ttg['relmc_bin'].iat[0])
     if (len(nde) >0 and len(de) >0): # we have observations for both eyes
         if (np.mean(nde) > 1) or (np.mean(de) > 1): # if either eye averages being in suppression
             tt_res = test_func(nde, de, **kwargs)
@@ -241,7 +242,7 @@ def compare_rs(df, n_boot=2, verbose=False, resample=False):
         else:
             pval = obs_pct * 2
         pvals_corrs[i] = pval
-        print(corrs_in_order[i], f"\nObserved value of {observed_corrs_ordered[i]:.3f} is greater than {obs_pct:.3f} of bootstrap distribution, corresponding to p={pval:.3f}.")
+        print(corrs_in_order[i], f"\nObserved value of {observed_corrs_ordered[i]:.3f} is greater than {obs_pct:.3f} of bootstrap distribution, corresponding to p={pval:.2f}.")
     print("\nPercentiles for permuted r_s differences:")
     for i in range(3):
         #p = np.percentile(rs_permute[i, :], np.array([0, 0.5, 1, 1.5, 2, 2.5, 5, 25, 50, 75, 95, 97.5, 100]))
@@ -251,7 +252,7 @@ def compare_rs(df, n_boot=2, verbose=False, resample=False):
         else:
             pval = obs_pct * 2
         pvals_diffs[i] = pval
-        print(comps[i], f"\nObserved value of {real_diffs[i]:.3f} is greater than {obs_pct:.3f} of bootstrap distribution, corresponding to p={pval:.3f}.")
+        print(comps[i], f"\nObserved value of {real_diffs[i]:.3f} is greater than {obs_pct:.3f} of bootstrap distribution, corresponding to p={pval:.2f}.")
     
     rs_df = pd.DataFrame({
         'amb_de':corrs_permute[0, :],

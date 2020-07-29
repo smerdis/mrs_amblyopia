@@ -102,34 +102,6 @@ def subject_fit_plot_pct(x, y, **kwargs):
     ax.errorbar(data=data, x=x, y=y, fmt=fmt_obs, **kwargs)
     ax.axhline(y=1,ls='dotted')
 
-def population_fit_plot(x, y, **kwargs):
-    # set up the data frame for plotting, get kwargs etc
-    data = kwargs.pop("data")
-    fmt_obs = kwargs.pop("fmt_obs")
-    fmt_pred = kwargs.pop("fmt_pred")
-    yerr = kwargs.pop("yerr")
-    ycol = kwargs.pop("Ycol")
-
-    ax = plt.gca()
-    ax.set_xscale('log')
-    ax.set_yscale('log')
-    ax.get_xaxis().set_major_locator(tick.LogLocator())
-    ax.get_yaxis().set_major_locator(tick.LogLocator())
-
-    pop_colors = {'Control':'C0', 'Amblyope':'C1'}
-
-    for gvpop, gpop in data.groupby(["Population"]):
-        #relMCToPred = gpop['RelMCToPred'].values
-        #ax.axvline(x=relMCToPred[0], ls='dotted', color=pop_colors[gvpop])
-        for gv, g in gpop.groupby(["Subject"]):
-            ses = g[yerr].values # SE's of actually observed threshold elevations
-            predY = g[ycol].values
-            #assert(np.all(relMCToPred==relMCToPred[0])) # check all the same
-            
-            ax.errorbar(data=g, x=x, y=y, yerr=ses,fmt=fmt_obs, **kwargs)
-            ax.errorbar(data=g, x=x, y=predY,fmt=fmt_pred, **kwargs)
-            ax.axhline(y=1,ls='dotted')
-
 def population_fit_plot_pct(x, y, **kwargs):
     # set up the data frame for plotting, get kwargs etc
     data = kwargs.pop("data")
@@ -160,7 +132,7 @@ def group_facet_plots(df, plot_func, ofn, grouping_vars, row, col, x, y, col_wra
                 g = g.add_legend(title="")
             g.fig.suptitle('')
             g.fig.subplots_adjust(top=.9, right=.8)
-            x_lbl = "Relative Mask Contrast (multiples of baseline)" if x=="RelMaskContrast" else x
+            x_lbl = "Relative Surround Contrast (multiples of baseline)" if x=="RelMaskContrast" else x
             y_lbl = "Threshold Elevation (multiples of baseline)" if y=="ThreshElev" else y
             g.set_axis_labels(x_lbl, y_lbl)
             g.set_titles('')
@@ -251,7 +223,7 @@ def gaba_vs_psychophys_plot(gv, gr, legend_box = [0.89, 0.55, 0.1, 0.1], legend_
 
         x_lbl = "GABA:Creatine ratio"
         y_lbl = {'BaselineThresh':'Baseline Threshold (C%)',
-                'RelMCToPred':'Relative Mask Contrast to predict threshold at',
+                'RelMCToPred':'Relative Surround Contrast to predict threshold at',
                 #'ThreshPredCritical':'Predicted threshold elevation, multiples of baseline',
                 'ThreshPredCritical':'Predicted threshold elevation, multiples of baseline\n(>1 indicates suppression, <1 facilitation)',
                 'DepthOfSuppressionPred':'Depth of suppression, multiples of baseline threshold\nnegative indicates facilitation',
@@ -282,7 +254,7 @@ def gaba_vs_oss_plot_2line(gv, gr):
     x_lbl = "GABA (relative to creatine)"
     yvar = "value"
     y_lbl = {'BaselineThresh':'Baseline Threshold (C%), Iso/Cross ratio',
-            'RelMCToPred':'Relative Mask Contrast to predict threshold at, Iso/Cross ratio',
+            'RelMCToPred':'Relative Surround Contrast to predict threshold at, Iso/Cross ratio',
             'ThreshPredCritical':'Predicted threshold elevation (multiples of baseline), Iso/Cross ratio',
             'DepthOfSuppressionPred':'Depth of suppression (multiples of baseline threshold)\nIso/Cross ratio',
             'ThreshPredCriticalUnnorm':'Predicted threshold elevation (C%) Iso/Cross ratio',
@@ -302,7 +274,7 @@ def gaba_vs_psychophys_plot_2line_2eye(gv, gr, **kwargs):
     x_lbl = "GABA (relative to creatine)"
     yvar = "Nde-De"
     y_lbl = {'BaselineThresh':'Interocular Difference in Baseline Threshold (NDE-DE, C%)',
-            'RelMCToPred':'Relative Mask Contrast to predict threshold at',
+            'RelMCToPred':'Relative Surround Contrast to predict threshold at',
             'ThreshPredCritical':'Interocular difference in\npredicted threshold elevation\n(NDE-DE, multiples of baseline)',
             'DepthOfSuppressionPred':'Interocular difference in predicted depth of suppression\n(in multiples of baseline threshold)',
             'ThreshPredCriticalUnnorm':'Interocular difference in predicted threshold elevation (NDE-DE, C%)',
