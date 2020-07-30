@@ -88,38 +88,6 @@ def subject_fit_plot(x, y, **kwargs):
     ax.axhline(y=1, ls='dotted', color='grey')
     ax.axvline(x=2, ls='dotted', color='red')
 
-def subject_fit_plot_pct(x, y, **kwargs):
-    # set up the data frame for plotting, get kwargs etc
-    data = kwargs.pop("data")
-    fmt_obs = kwargs.pop("fmt_obs")
-
-    # control the plotting
-    ax = plt.gca()
-    ax.set_xscale('log')
-    ax.set_yscale('log')
-    ax.get_xaxis().set_major_locator(tick.LogLocator())
-    ax.get_yaxis().set_major_locator(tick.LogLocator())
-    ax.errorbar(data=data, x=x, y=y, fmt=fmt_obs, **kwargs)
-    ax.axhline(y=1,ls='dotted')
-
-def population_fit_plot_pct(x, y, **kwargs):
-    # set up the data frame for plotting, get kwargs etc
-    data = kwargs.pop("data")
-    fmt_obs = kwargs.pop("fmt_obs")
-    
-    ax = plt.gca()
-    ax.set_xscale('log')
-    ax.set_yscale('log')
-    ax.get_xaxis().set_major_locator(tick.LogLocator())
-    ax.get_yaxis().set_major_locator(tick.LogLocator())
-
-    pop_colors = {'Control':'C0', 'Amblyope':'C1'}
-
-    for gvpop, gpop in data.groupby(["Population"]):
-        for gv, g in gpop.groupby(["Subject"]):            
-            ax.errorbar(data=g, x=x, y=y,fmt=fmt_obs, **kwargs)
-            ax.axhline(y=1,ls='dotted')
-
 def group_facet_plots(df, plot_func, ofn, grouping_vars, row, col, x, y, col_wrap=None, hue=None, legend=True, **kwargs):
     with PdfPages(ofn) as pdf:
         grouped = df.groupby(grouping_vars)
@@ -229,97 +197,13 @@ def gaba_vs_psychophys_plot(gv, gr, legend_box = [0.89, 0.55, 0.1, 0.1], legend_
                 'DepthOfSuppressionPred':'Depth of suppression, multiples of baseline threshold\nnegative indicates facilitation',
                 'ThreshPredCriticalUnnorm':'Predicted threshold elevation (C%)',
                 'slope':'Slope of perceptual suppression fit line',
-                'y_int':'y-intercept of perceptual suppression fit line'}
+                'y_int':'y-intercept of perceptual suppression fit line',
+                'OSSSRatio':'Orientation-selective surround suppression\n(Iso-surround:cross-surround ratio)'}
         g.set_axis_labels(x_lbl, y_lbl[gv[-1]])
 
     plt.close(g.fig)
     return(g)
-
-def gaba_vs_psychophys_plot_2line_nofacet(gv, gr, **kwargs):
-    xvar = "GABA"
-    yvar = "value"
-    g = sns.lmplot(data=gr, 
-              x=xvar, y=yvar,hue="Eye", sharey=True, markers=["x","o"], **kwargs)
-    g.set_axis_labels('', '')
-    #g.set_xticklabels([])
-    #g.set_yticklabels([])
-    #g.ax.set_ylim([-1, 3])
-    #g.set_titles(None)
-    g.fig.suptitle(', '.join(gv), fontsize=16, y=0.97)
-    plt.close(g.fig)
-    return(g)
-
-def gaba_vs_oss_plot_2line(gv, gr):
-    xvar = "GABA"
-    x_lbl = "GABA (relative to creatine)"
-    yvar = "value"
-    y_lbl = {'BaselineThresh':'Baseline Threshold (C%), Iso/Cross ratio',
-            'RelMCToPred':'Relative Surround Contrast to predict threshold at, Iso/Cross ratio',
-            'ThreshPredCritical':'Predicted threshold elevation (multiples of baseline), Iso/Cross ratio',
-            'DepthOfSuppressionPred':'Depth of suppression (multiples of baseline threshold)\nIso/Cross ratio',
-            'ThreshPredCriticalUnnorm':'Predicted threshold elevation (C%) Iso/Cross ratio',
-            'slope':'Slope of perceptual suppression fit line, Iso/Cross ratio',
-            'y_int':'y-intercept of perceptual suppression fit line, Iso/Cross ratio'}
-    g = sns.lmplot(data=gr, 
-              row='Presentation',col='Population',# facet rows and columns
-              x=xvar, y=yvar,hue="Eye",sharey=True, markers=["o","x"])
-    g.fig.suptitle(', '.join(gv), fontsize=16, y=0.97)
-    g.fig.subplots_adjust(top=.9, right=.8)
-    g.set_axis_labels(x_lbl, y_lbl[gv[-1]])
-    plt.close(g.fig)
-    return(g)
-
-def gaba_vs_psychophys_plot_2line_2eye(gv, gr, **kwargs):
-    xvar = "GABA"
-    x_lbl = "GABA (relative to creatine)"
-    yvar = "Nde-De"
-    y_lbl = {'BaselineThresh':'Interocular Difference in Baseline Threshold (NDE-DE, C%)',
-            'RelMCToPred':'Relative Surround Contrast to predict threshold at',
-            'ThreshPredCritical':'Interocular difference in\npredicted threshold elevation\n(NDE-DE, multiples of baseline)',
-            'DepthOfSuppressionPred':'Interocular difference in predicted depth of suppression\n(in multiples of baseline threshold)',
-            'ThreshPredCriticalUnnorm':'Interocular difference in predicted threshold elevation (NDE-DE, C%)',
-            'slope':'Interocular difference in slope of perceptual suppression fit line',
-            'y_int':'Interocular difference in y-intercept of perceptual suppression fit line'}
-    g = sns.lmplot(data=gr, 
-                  col='Presentation',hue='Population',# facet rows and columns
-                  x=xvar, y=yvar,sharey=True, ci=None, **kwargs)
-    g._legend.set_title('')
-    g.set_titles('')
-    #g.fig.suptitle(':'.join(gv), fontsize=16, y=0.97)
-    g.fig.subplots_adjust(left=.15, top=.9, right=.8)
-    g.set_axis_labels(x_lbl, y_lbl[gv[-1]])
-    plt.close(g.fig)
-    return(g)
-
-def oss_plot_2eye(gv, gr, **kwargs):
-    xvar = "GABA"
-    x_lbl = "GABA (relative to creatine)"
-    yvar = "value"
-    g = sns.lmplot(data=gr, 
-                  col='Presentation',hue='Population',# facet rows and columns
-                  x=xvar, y=yvar,sharey=True, **kwargs)
-    g.fig.suptitle(':'.join(gv), fontsize=16, y=0.97)
-    g.fig.subplots_adjust(top=.9, right=.8)
-    g.set_axis_labels(x_lbl, "Mean Iso/Cross OSS ratio across both eyes")
-    plt.close(g.fig)
-    return(g)
-
-def gaba_vs_psychophys_plot_2line_2eye_nofacet(gv, gr, **kwargs):
-    xvar = "GABA"
-    yvar = "Nde-De"
-    sns.set_palette('tab10')
-    g = sns.lmplot(data=gr, 
-                  x=xvar, y=yvar,sharey=True, **kwargs)
-    #g.fig.suptitle(':'.join(gv), fontsize=16, y=0.97)
-    #g.fig.subplots_adjust(top=.9, right=.8)
-    #g.set_axis_labels(x_lbl, y_lbl[gv[-1]])
-    g.set_axis_labels('', '')
-    g.set_xticklabels([])
-    g.set_yticklabels([])
-    g.ax.set_ylim([-2, 3])
-    plt.close(g.fig)
-    return(g)
-
+    
 def gaba_vs_psychophys_plot_4line(gv, gr):
     xvar = "GABA"
     x_lbl = "GABA (relative to creatine)"
