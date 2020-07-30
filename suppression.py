@@ -179,9 +179,9 @@ def gaba_vs_psychophys_plot(gv, gr, legend_box = [0.89, 0.55, 0.1, 0.1], legend_
     with sns.plotting_context(context="paper", font_scale=1.0):
         xvar = "GABA"
         yvar = "value"
-        if kwargs['n_boot']:
+        try:
             n_boot = kwargs['n_boot']
-        else:
+        except KeyError:
             n_boot = 1000
         g = sns.lmplot(data=gr, x=xvar, y=yvar, **kwargs)
         iterations, pvals_corrs, pvals_diffs = utils.compare_rs(gr, n_boot=n_boot, resample=False)
