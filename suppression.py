@@ -138,7 +138,7 @@ def annotate_n(xcol, ycol, tracecol, **kwargs):
             if trace=="Normally-sighted\npersons, NDE":
                 color=colors[3]
                 pval=pvals[3]
-        annotation = fr"N={n_thistrace}, $\rho$={rho_result.correlation:.2f}, p={pval:.2f}"
+        annotation = fr"N={n_thistrace}, $\rho$={rho_result.correlation:+.2f}, p={pval:.2f}"
         ax.text(*pos, annotation, fontsize=16, transform=ax.transAxes, fontdict={'color': color}, horizontalalignment='center')
 
 def gaba_vs_psychophys_plot(gv, gr, legend_box = [0.89, 0.55, 0.1, 0.1], legend_img = True, log = False, ylim = None, **kwargs):
@@ -203,7 +203,7 @@ def gaba_vs_psychophys_plot(gv, gr, legend_box = [0.89, 0.55, 0.1, 0.1], legend_
 
     plt.close(g.fig)
     return(g)
-    
+
 def gaba_vs_psychophys_plot_4line(gv, gr):
     xvar = "GABA"
     x_lbl = "GABA (relative to creatine)"
