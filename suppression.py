@@ -20,74 +20,6 @@ import itertools as it
 import utils
 
 ## Plotting functions
-def scaterror_plot(x, y, **kwargs):
-    #'''This function is designed to be called with FacetGrid.map_dataframe() to make faceted plots of various conditions.'''
-    #print x, y, kwargs
-    data = kwargs.pop("data")
-    ses = data[kwargs.pop("yerr")].values
-    # control the plotting
-    ax = plt.gca()
-    ax.set_xscale('log')
-    ax.set_yscale('log')
-    ax.get_xaxis().set_major_locator(tick.LogLocator(subs=[1,2,3,4,5,6,7,8,9]))
-    #ax.get_yaxis().set_major_locator(tick.LogLocator(subs=[1, 3]))
-    #ax.get_xaxis().set_major_formatter(tick.ScalarFormatter())
-    #ax.get_yaxis().set_major_formatter(tick.ScalarFormatter())
-    #ax.set_ylim([0.6, 4])
-    #ax.set_xlim([4, 105])
-    plt.errorbar(data=data, x=x, y=y, yerr=ses, **kwargs)
-    plt.axhline(y=1, ls='dotted', color='gray')
-
-def group_scatter_plot(x, y, **kwargs):
-    """Plotting function for group scatter plots, SfN poster 2018"""
-    data = kwargs.pop("data")
-    yerr = kwargs.pop("yerr")
-    # control the plotting
-    fig, ax = plt.subplots(1, figsize=(6.2,5.1))
-    # ax.set_xscale('log')
-    # ax.set_yscale('log')
-    # ax.set_ylim([0.6, 4.2])
-    # ax.get_xaxis().set_major_locator(tick.LogLocator(subs=[1,2,3,4,5,6,7,8,9]))
-    # ax.set_xticklabels([])
-    # ax.get_yaxis().set_major_locator(tick.LogLocator(subs=[1,2,3,4,5,6,7,8,9]))
-    # ax.set_yticklabels([])
-    # ax.get_yaxis().set_major_formatter(tick.NullFormatter())
-    # ax.get_yaxis().set_minor_formatter(tick.NullFormatter())
-
-    # Plot the eyes separately so we can apply different styling
-    traces = data.groupby('Trace')
-    fmt = {'Amblyope-Nde':':x', 'Amblyope-De':'--s',
-           'Control-Nde':':x', 'Control-De':'--s'}
-    # for trace, trace_df in traces:
-    #     ses = trace_df[yerr].values
-    #     ax.errorbar(data=trace_df, x=x, y=y, yerr=ses, fmt=fmt[trace], **kwargs)
-    # ax.axhline(y=1, ls='dotted', color='gray')
-    return(fig)
-
-def subject_fit_plot(x, y, **kwargs):
-    # set up the data frame for plotting, get kwargs etc
-    data = kwargs.pop("data")
-    fmt_obs = kwargs.pop("fmt_obs")
-    fmt_pred = kwargs.pop("fmt_pred")
-    ses = data[kwargs.pop("yerr")].values # SE's of actually observed threshold elevations
-    predY = kwargs.pop("Ycol")
-    print(x, y, ses, predY)
-
-    # control the plotting
-    ax = plt.gca()
-    # ax.set_xscale('log')
-    # ax.set_yscale('log')
-    # ax.get_xaxis().set_major_locator(tick.LogLocator())
-    # ax.get_yaxis().set_major_locator(tick.LogLocator())
-    #ax.get_xaxis().set_major_formatter(tick.ScalarFormatter())
-    #ax.get_yaxis().set_major_formatter(tick.ScalarFormatter())
-    #ax.set_ylim([0.5, np.max([np.max(data[y])+1])])
-    #ax.set_xlim([0.5, 10])
-    ax.errorbar(data=data, x=x, y=y, yerr=ses,fmt=fmt_obs, **kwargs)
-    ax.errorbar(data=data, x=x, y=predY,fmt=fmt_pred, **kwargs)
-    ax.axhline(y=1, ls='dotted', color='grey')
-    ax.axvline(x=2, ls='dotted', color='red')
-
 def group_facet_plots(df, plot_func, ofn, grouping_vars, row, col, x, y, col_wrap=None, hue=None, legend=True, **kwargs):
     with PdfPages(ofn) as pdf:
         grouped = df.groupby(grouping_vars)
@@ -255,22 +187,5 @@ def gaba_vs_psychophys_plot(gv, gr, legend_box = [0.89, 0.55, 0.1, 0.1], legend_
                 'OSSSRatio':'Orientation-selective surround suppression\n(Iso-surround:cross-surround ratio)'}
         g.set_axis_labels(x_lbl, y_lbl[gv[-1]])
 
-    plt.close(g.fig)
-    return(g)
-
-def gaba_vs_psychophys_plot_4line(gv, gr):
-    xvar = "GABA"
-    x_lbl = "GABA (relative to creatine)"
-    yvar = "value"
-    y_lbl = {'BaselineThresh':'Baseline Threshold (C%)',
-            'ThreshPredCritical':'Predicted Threshold Elevation (multiples of baseline)',
-            'ThreshPredCriticalUnnorm':'Predicted Threshold Elevation (C%)'}
-    g = sns.lmplot(data=gr, 
-                  row='Presentation',col='measure',# facet rows and columns
-                  x=xvar, y=yvar,hue="Trace",sharey=True, ci=False, markers=["o","x", "o", "x"], line_kws={"linestyle": "dotted"})
-    g.fig.suptitle(gv, fontsize=16, y=0.97)
-    g.fig.subplots_adjust(top=.9, right=.8)
-    g.set_axis_labels(x_lbl, y_lbl[gv[2]])
-    g.fig.set_figwidth(10)
     plt.close(g.fig)
     return(g)
