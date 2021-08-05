@@ -138,14 +138,6 @@ def gaba_vs_psychophys_plot(gv, gr, legend_box = [0.89, 0.55, 0.1, 0.1], legend_
                 #g.map(annotate_facet, 'GABA', 'value', 'Trace', what=what, pvals=pvals_corrs, palette=kwargs['palette']) #runs on each level of hue in each facet
                 g.map_dataframe(annotate_facet_df, 'GABA', 'value', 'Trace', what=what, pvals=pvals_corrs, palette=kwargs['palette'], presentation=agv[-1]) #runs on each level of hue in each facet
 
-        # if 'SS' in gv and legend_img: # display legend schematic image
-        #     if 'Iso' in gv:
-        #         im = plt.imread(f"/Users/smerdis/Dropbox/Documents/cal/silverlab/mrs-amblyopia/ss-iso-targetandmask-12.png")
-        #     elif 'Cross' in gv:
-        #         im = plt.imread(f"/Users/smerdis/Dropbox/Documents/cal/silverlab/mrs-amblyopia/ss-cross-targetandmask.png")
-        #     else:
-        #         print('Unknown orientation...')
-
         for axi, ax in enumerate(g.axes.flat): #set various things on each facet
             if log:
                 ax.set_yscale('log')
@@ -177,13 +169,7 @@ def gaba_vs_psychophys_plot(gv, gr, legend_box = [0.89, 0.55, 0.1, 0.1], legend_
         x_lbl = "GABA:Creatine ratio"
         y_lbl = {'BaselineThresh':'Baseline contrast discrimination threshold (C%)',
                 'ThreshElev':'Relative threshold\n(multiples of baseline)',
-                'RelMCToPred':'Relative Surround Contrast to predict threshold at',
-                #'ThreshPredCritical':'Predicted threshold elevation, multiples of baseline',
                 'ThreshPredCritical':'Relative threshold, multiples of baseline\n(>1 indicates suppression, <1 facilitation)',
-                'DepthOfSuppressionPred':'Depth of suppression, multiples of baseline threshold\nnegative indicates facilitation',
-                'ThreshPredCriticalUnnorm':'Predicted threshold elevation (C%)',
-                'slope':'Slope of perceptual suppression fit line',
-                'y_int':'y-intercept of perceptual suppression fit line',
                 'OSSSRatio':'Orientation-selective surround suppression\n(Iso-surround:cross-surround ratio)'}
         g.set_axis_labels(x_lbl, y_lbl[gv[-1]])
 
