@@ -5,13 +5,6 @@ import scipy.stats as st
 import statsmodels.formula.api as sm
 import glob
 
-## functions to convert between db and Michelson contrast
-def pct_to_db(pct):
-    return 20 * np.log10(pct)
-
-def db_to_pct(db):
-    return 10**(db/20)
-
 ## Functions to read input
 def load_psychophys(pp_fn):
     df = pd.read_csv(pp_fn, sep='\t')
