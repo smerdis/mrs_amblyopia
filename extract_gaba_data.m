@@ -11,13 +11,15 @@ clear all;
 
 data_dir = '~/code/MRS_amblyopia/analysis/gaba' ;
 gaba_fn = [data_dir '/MRS_group_summary_n31_110614.mat'] ;
+%gaba_fn = [data_dir '/MRS_norm_group_summary_n31_110614.mat'] ;
 
-output_fn = 'gaba_data_2019_recheck.txt';
+output_fn = 'gaba_data_2021.txt';
 
 %% Surround suppression task
 load(gaba_fn) ; % should yield 'DAV' and some other (ignored) vars
 
 % Call the parsing function
+% [gaba_col_str, gaba_txt] = parse_gaba(DAV.GABA.norm.ratio_CrOff) ;
 [gaba_col_str, gaba_txt] = parse_gaba(DAV.GABA.raw.ratio_CrOff) ;
 
 %% Evaluate, merge
