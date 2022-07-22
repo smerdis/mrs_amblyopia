@@ -20,7 +20,8 @@ load(gaba_fn) ; % should yield 'DAV' and some other (ignored) vars
 
 % Call the parsing function
 % [gaba_col_str, gaba_txt] = parse_gaba(DAV.GABA.norm.ratio_CrOff) ;
-[gaba_col_str, gaba_txt] = parse_gaba(DAV.GABA.raw.ratio_CrOff) ;
+% [gaba_col_str, gaba_txt] = parse_gaba(DAV.GABA.raw.ratio_CrOff) ;
+[gaba_col_str, gaba_txt] = parse_gaba(DAV.GABA.raw.ratio_CrSum) ;
 
 %% Evaluate, merge
 
