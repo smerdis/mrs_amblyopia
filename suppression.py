@@ -8,9 +8,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 import matplotlib.ticker as tick
-import matplotlib.image as mpimg
-from matplotlib.offsetbox import (OffsetImage,
-                                  AnnotationBbox)
+
 import seaborn as sns
 
 import scipy.stats as st
@@ -18,62 +16,6 @@ import scipy.stats as st
 import itertools as it
 
 import utils
-
-## Plotting functions
-def group_facet_plots(df, plot_func, ofn, grouping_vars, row, col, x, y, col_wrap=None, hue=None, legend=True, **kwargs):
-    with PdfPages(ofn) as pdf:
-        grouped = df.groupby(grouping_vars)
-        for gv, gr in grouped: # each page
-            g = sns.FacetGrid(gr, row=row, col=col, hue=hue, col_wrap=col_wrap, height=6, aspect=1.5,
-                sharex=False, sharey=True, margin_titles=False, legend_out=False, palette=['#6600ff', '#009966'])
-            g = g.map_dataframe(plot_func,x,y,**kwargs)
-            print('Plotting %s'%'.'.join(gv))
-            if legend:
-                g = g.add_legend(title="")
-            g.fig.suptitle('')
-            g.fig.subplots_adjust(top=.9, right=.8)
-            x_lbl = "Relative surround Contrast (multiples of baseline)" if x=="RelMaskContrast" else x
-            y_lbl = "Relative threshold, multiples of baseline\n(>1 indicates suppression, <1 facilitation)" if y=="ThreshElev" else y
-            g.set_axis_labels(x_lbl, y_lbl)
-            g.set_titles('')
-            pdf.savefig(g.fig)
-            plt.close(g.fig)
-    print('Plots saved at',ofn)
-    plt.close('all')
-
-def annotate_facet(xcol, ycol, tracecol, what='rho', **kwargs):
-    """Annotate each level of hue variable on each facet of graph (i.e. multiple times per facet)"""
-    print(f"Annotating\n{tracecol.iloc[0]}\n{kwargs}")
-    ax = plt.gca()
-    trace = tracecol.unique()[0] # 'Persons with\nAmblyopia, DE' etc
-    if kwargs['pvals'] is not None:
-        pvals = kwargs.pop("pvals") #pvals from bootstrap
-    else:
-        pvals = None
-    pal = kwargs['palette']
-    n_thistrace = len(tracecol)
-    assert(n_thistrace==len(xcol)==len(ycol))
-    if n_thistrace > 2:
-        if trace == "Persons with\nAmblyopia, DE" or trace=="Normally-sighted\npersons, DE":
-            pos = (0.5, 0.9)
-            if trace == "Persons with\nAmblyopia, DE":
-                pval = pvals[0]
-            if trace=="Normally-sighted\npersons, DE":
-                pval = pvals[2]
-        if trace == "Persons with\nAmblyopia, NDE" or trace=="Normally-sighted\npersons, NDE":
-            pos = (0.5, 0.85)
-            if trace == "Persons with\nAmblyopia, NDE":
-                pval=pvals[1]
-            if trace=="Normally-sighted\npersons, NDE":
-                pval=pvals[3]
-        color = pal[trace]
-        if what=='rho':
-            result = st.spearmanr(xcol, ycol)
-            annotation = fr"N={n_thistrace}, $\rho$={result.correlation:.2f}, p={pval:.2f}"
-        elif what=='slope':
-            result = st.linregress(xcol, ycol)
-            annotation = fr"N={n_thistrace}, slope={result.slope:.2f}, p={pval:.2f}"
-        ax.text(*pos, annotation, fontsize=16, transform=ax.transAxes, fontdict={'color': color}, horizontalalignment='center')
 
 def annotate_facet_df(xcol, ycol, tracecol, what='rho', **kwargs):
     """Annotate each level of hue variable on each facet of graph (i.e. multiple times per facet)"""
@@ -118,7 +60,7 @@ def annotate_facet_df(xcol, ycol, tracecol, what='rho', **kwargs):
 def gaba_vs_psychophys_plot(gv, gr, legend_box = [0.89, 0.55, 0.1, 0.1], legend_img = True, log = False, ylim = None, annotate=True, boot_func=utils.compare_rs, **kwargs):
     """Plotting function for GABA vs. psychophysical measures, with annotations etc."""
     print(gv)#, gr)
-    with sns.plotting_context(context="paper", font_scale=1.0):
+    with sns.plotting_context(context="paper", font_scale=0.8):
         xvar = "GABA"
         yvar = "value"
         try:
@@ -135,7 +77,6 @@ def gaba_vs_psychophys_plot(gv, gr, legend_box = [0.89, 0.55, 0.1, 0.1], legend_
             for agv, agr in anno_groups:
                 print(agv[-1])
                 iterations, pvals_corrs, pvals_diffs = boot_func(agr, n_boot=n_boot, verbose=False, resample=False)
-                #g.map(annotate_facet, 'GABA', 'value', 'Trace', what=what, pvals=pvals_corrs, palette=kwargs['palette']) #runs on each level of hue in each facet
                 g.map_dataframe(annotate_facet_df, 'GABA', 'value', 'Trace', what=what, pvals=pvals_corrs, palette=kwargs['palette'], presentation=agv[-1]) #runs on each level of hue in each facet
 
         for axi, ax in enumerate(g.axes.flat): #set various things on each facet
@@ -155,9 +96,9 @@ def gaba_vs_psychophys_plot(gv, gr, legend_box = [0.89, 0.55, 0.1, 0.1], legend_
             #newax = g.fig.add_axes(legend_box[axi], anchor='NE')
             #newax.imshow(im)
             #newax.axis('off')
-            if 'nDicho' in gv:
+            if 'Dicho' in gv:
                 ax.legend(loc='lower left', title='Annulus presented to:\n(other eye viewed surround)')
-            elif 'nMono' in gv:
+            elif 'Mono' in gv:
                 ax.legend(loc='lower left', title='Annulus and surround\npresented to:')
             else: # page grouping variables don't include presentation, i.e. there are 4 subplots on one page
                 ax.legend(loc='lower left', title='Annulus presented to:')
