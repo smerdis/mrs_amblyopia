@@ -2,14 +2,13 @@ import numpy as np
 import pandas as pd
 from scipy.io import loadmat
 import scipy.stats as st
-import statsmodels.formula.api as sm
+import statsmodels.api as sm
+from statsmodels.formula.api import ols
 import glob
 
 ## Functions to read input
 def load_psychophys(pp_fn):
     df = pd.read_csv(pp_fn, sep='\t')
-    #df['logThreshElev'] = np.log10(df['ThreshElev'])
-    #df['logRelMaskContrast'] = np.log10(df['RelMaskContrast'])
     return df
 
 def load_gaba(gaba_fn, pres_cond='occ_binoc'):
@@ -30,6 +29,12 @@ def get_interocular_diff(g, field):
         g['ValueDiff'] = nde_mean - de_mean
         g['ValueRatio'] = nde_mean/de_mean
         return g
+
+def big_anova(df, model_str):
+    """Do the big ANOVA on psychophysical data requested by reviewer #1 of CC sub."""
+    model = ols(model_str, data=df).fit()
+    aov_table = sm.stats.anova_lm(model, typ=2)
+    return aov_table[['F', 'PR(>F)']]
 
 def calc_rs(df, permute=False):
     if permute:
@@ -143,14 +148,10 @@ def compare_rs(df, n_boot=2, verbose=False, resample=False):
     return rs_df, pvals_corrs, pvals_diffs
 
 def calculate_orientation_selective_suppression(df, col='value', **kwargs):
-    #print(df[['Orientation', 'value']])
     if len(df.Orientation.unique())==2:
         v1 = df[df.Orientation=='Iso'][col].iloc[0]
         v2 = df[df.Orientation=='Cross'][col].iloc[0]
         iso_cross_oss_ratio = v1/v2
-        #iso_cross_mean = np.mean([v1, v2])
     else:
         iso_cross_oss_ratio = np.nan
-        #iso_cross_mean = np.nan
-    print(f"Iso/Cross ratio: {iso_cross_oss_ratio}")
     return pd.Series(iso_cross_oss_ratio, ['value'])
