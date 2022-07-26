@@ -2,6 +2,7 @@
 #
 # Functions to read in, deal with, and plot the psychophysical data extracted from MATLAB
 
+from ctypes import util
 import numpy as np
 import pandas as pd
 
@@ -29,8 +30,9 @@ def annotate_facet_df(xcol, ycol, tracecol, what='rho', **kwargs):
     trace = data[tracecol].unique()[0] # 'Persons with\nAmblyopia, DE' etc
     pal = kwargs['palette']
     presentation = kwargs.pop("presentation") #pvals from bootstrap
-    n_thistrace = len(data[tracecol])
-    assert(n_thistrace==len(data[xcol])==len(data[ycol]))
+    data_cleaned = data.dropna(axis=0, subset=[xcol])
+    n_thistrace = len(data_cleaned[xcol])
+    assert(n_thistrace==len(data_cleaned[xcol])==len(data_cleaned[ycol]))
     if n_thistrace > 2:
         # if this graph has 8 lines (2 presentation conditions x 2 populations x 2 eyes), annotate only the correct 4, which are in kwarg 'presentation'
         # if this graph has 4 lines (2 populations x 2 eyes for one presentation condition, which is then not in data.columns), annotate it
@@ -49,7 +51,7 @@ def annotate_facet_df(xcol, ycol, tracecol, what='rho', **kwargs):
                     pval=pvals[3]
             color = pal[trace]
             if what=='rho':
-                result = st.spearmanr(data[xcol], data[ycol])
+                result = st.spearmanr(data_cleaned[xcol], data_cleaned[ycol])
                 annotation = fr"N={n_thistrace}, $\rho$={result.correlation:.2f}, p={pval:.2f}"
             elif what=='slope':
                 result = st.linregress(data[xcol], data[ycol])
@@ -57,27 +59,38 @@ def annotate_facet_df(xcol, ycol, tracecol, what='rho', **kwargs):
             ax.text(*pos, annotation, fontsize=12, transform=ax.transAxes, fontdict={'color': color}, horizontalalignment='center')
 
 
-def gaba_vs_psychophys_plot(gv, gr, legend_box = [0.89, 0.55, 0.1, 0.1], legend_img = True, log = False, ylim = None, annotate=True, boot_func=utils.compare_rs, **kwargs):
+def gaba_vs_psychophys_plot(gv, gr, xvar="GABA", yvar="value", legend_box = [0.89, 0.55, 0.1, 0.1], legend_img = True, log = False, ylim = None, annotate=True, boot_func=utils.compare_rs, **kwargs):
     """Plotting function for GABA vs. psychophysical measures, with annotations etc."""
-    print(gv)#, gr)
+    print("===", "\n", gv)#, gr)
     with sns.plotting_context(context="paper", font_scale=0.8):
-        xvar = "GABA"
-        yvar = "value"
+        #xvar = "GABA"
+        #yvar = "value"
         try:
             n_boot = kwargs['n_boot']
         except KeyError:
             n_boot = 1000
         if boot_func == utils.compare_rs:
             what='rho'
-        elif boot_func == utils.compare_slopes:
-            what = 'slope'
+        elif boot_func == utils.compare_rs_multi:
+            what='rho'
+        #elif boot_func == utils.compare_slopes:
+        #    what = 'slope'
         g = sns.lmplot(data=gr, x=xvar, y=yvar, **kwargs)
         if annotate:
             anno_groups = gr.groupby(['Task','Orientation','Presentation'])
             for agv, agr in anno_groups:
                 print(agv[-1])
-                iterations, pvals_corrs, pvals_diffs = boot_func(agr, n_boot=n_boot, verbose=False, resample=False)
-                g.map_dataframe(annotate_facet_df, 'GABA', 'value', 'Trace', what=what, pvals=pvals_corrs, palette=kwargs['palette'], presentation=agv[-1]) #runs on each level of hue in each facet
+                _, pvals_corrs, _ = boot_func(agr, n_boot=n_boot, verbose=False, resample=False)
+                print(pvals_corrs, pvals_corrs.shape, len(pvals_corrs.shape))
+                if len(pvals_corrs.shape) > 1:
+                    if xvar == "GABA":
+                        pvi = 0
+                    elif xvar == "motorGABA":
+                        pvi = 1
+                    g.map_dataframe(annotate_facet_df, xvar, yvar, 'Trace', what=what, pvals=pvals_corrs[pvi], palette=kwargs['palette'], presentation=agv[-1]) #runs on each level of hue in each facet
+                else:
+                    g.map_dataframe(annotate_facet_df, xvar, yvar, 'Trace', what=what, pvals=pvals_corrs, palette=kwargs['palette'], presentation=agv[-1]) #runs on each level of hue in each facet
+
 
         for axi, ax in enumerate(g.axes.flat): #set various things on each facet
             if log:
@@ -107,7 +120,12 @@ def gaba_vs_psychophys_plot(gv, gr, legend_box = [0.89, 0.55, 0.1, 0.1], legend_
             g._legend.set_title(f"Target presented to")
             #g._legend.set_bbox_to_anchor([legend_box[0], legend_box[1]-0.16, legend_box[2], legend_box[3]])
 
-        x_lbl = "GABA:Creatine ratio"
+        if xvar=="GABA":
+            x_lbl = "Occipital GABA:Creatine ratio"
+        elif xvar=="motorGABA":
+            x_lbl = "Sensorimotor GABA:Creatine ratio"
+        else:
+            x_lbl = xvar
         y_lbl = {'BaselineThresh':'Baseline contrast discrimination threshold (C%)',
                 'ThreshElev':'Relative threshold\n(multiples of baseline)',
                 'ThreshPredCritical':'Relative threshold, multiples of baseline\n(>1 indicates suppression, <1 facilitation)',
